@@ -4,11 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
+	"github.com/alessio/shellescape"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
@@ -94,40 +99,111 @@ func main() {
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	clientConfig, err := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/drive.file")
+	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
 	client := getClient(clientConfig)
 
-	// conf := &oauth2.Config{
-	// 	ClientID:     "",
-	// 	ClientSecret: "",
-	// 	Scopes:       []string{"https://www.googleapis.com/auth/drive.file"},
-	// 	Endpoint:     google.Endpoint,
-	// }
-	// ctx := context.Background()
-	// // Redirect user to consent page to ask for permission
-	// // for the scopes specified above.
-	// url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
-	// fmt.Printf("Visit the URL for the auth dialog: %v", url)
-
-	// // Use the authorization code that is pushed to the redirect
-	// // URL. Exchange will do the handshake to retrieve the
-	// // initial access token. The HTTP Client returned by
-	// // conf.Client will refresh the token as necessary.
-	// var code string
-	// _, err = fmt.Scan(&code)
-	// checkError(err)
-	// tok, err := conf.Exchange(ctx, code)
-	// checkError(err)
-
-	// client := conf.Client(ctx, tok)
 	service, err := drive.New(client)
 	checkError(err)
-	driveFileList, err := service.Files.List().Do()
+	listFilesCall := service.Files.List()
+	listFilesCall.Fields("files(name, id, parents)")
+	driveFileList, err := listFilesCall.Do()
+	checkError(err)
 
 	fmt.Println(driveFileList)
+
+	goSyncerRoot := ""
+	mapFiles := map[string]*drive.File{}
+	for _, file := range driveFileList.Files {
+		fmt.Println(file)
+		fmt.Println(file.Name)
+		if file.Name == "Go-Syncer-Root" {
+			goSyncerRoot = file.Id
+			continue
+		}
+		mapFiles[file.Id] = file
+		if file.MimeType == "application/vnd.google-apps.folder" {
+
+		}
+	}
+	mapPaths := map[string]string{}
+	for id, file := range mapFiles {
+		parentId := file.Parents[0]
+		path := file.Name
+		for true {
+			if parentId == goSyncerRoot {
+				break
+			}
+			path = mapFiles[parentId].Name + "/" + path
+			parentId = mapFiles[parentId].Parents[0]
+		}
+		mapPaths[path] = id
+	}
+	fmt.Println(mapPaths)
+
+	for _, fileAsk := range config.FilesAsk {
+		out, err := exec.Command("bash", "-c", "realpath "+shellescape.StripUnsafe(fileAsk)).Output()
+		checkError(err)
+		realPath := strings.TrimSpace(string(out[:]))
+		fmt.Println(realPath)
+		baseName := filepath.Base(fileAsk)
+		dirId, ok := mapPaths[filepath.Dir(fileAsk)]
+		fmt.Println(filepath.Dir(fileAsk))
+		fmt.Println(dirId)
+		fmt.Println(baseName)
+		id, ok := mapPaths[fileAsk]
+		if ok {
+			fmt.Println(id)
+		} else {
+			f, err := os.Open(realPath)
+			// f, err := os.Open("/home/chris/.bashrc")
+			checkError(err)
+			defer f.Close()
+
+			// _, err = createDir(service, "config", "1KmrT8Yh_N8Ur0MXni__eGbC0_4-z_S5I")
+			checkError(err)
+			_, err = createFile(service, baseName, "text/plain", f, dirId)
+			checkError(err)
+
+			fmt.Printf("File '%s' successfully uploaded", fileAsk)
+		}
+	}
+
+}
+
+func createDir(service *drive.Service, name string, parentId string) (*drive.File, error) {
+	d := &drive.File{
+		Name:     name,
+		MimeType: "application/vnd.google-apps.folder",
+		Parents:  []string{parentId},
+	}
+
+	file, err := service.Files.Create(d).Do()
+
+	if err != nil {
+		log.Println("Could not create dir: " + err.Error())
+		return nil, err
+	}
+
+	return file, nil
+}
+
+func createFile(service *drive.Service, name string, mimeType string, content io.Reader, parentId string) (*drive.File, error) {
+	f := &drive.File{
+		MimeType: mimeType,
+		Name:     name,
+		Parents:  []string{parentId},
+	}
+	file, err := service.Files.Create(f).Media(content).Do()
+
+	if err != nil {
+		log.Println("Could not create file: " + err.Error())
+		return nil, err
+	}
+
+	return file, nil
 }
 
 func checkError(err error) {
