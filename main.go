@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/alessio/shellescape"
 	"golang.org/x/oauth2"
@@ -19,14 +20,17 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-const (
-	clientId     = "71296309757-nmhsm2ln7606lvgtoctqmo3ashvotfaa.apps.googleusercontent.com"
-	clientSecret = "YmdfPYyJhlu08dHpVQQTnjbR"
-)
-
 type Config struct {
 	Files    []string
 	FilesAsk []string
+}
+
+type StateData struct {
+	FileStateData map[string]*FileStateData
+}
+
+type FileStateData struct {
+	LastCloudUpdate string
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
@@ -84,49 +88,49 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
+func realPath(path string) string {
+	out, err := exec.Command("bash", "-c", "realpath "+shellescape.StripUnsafe(path)).Output()
+	checkError(err)
+	return strings.TrimSpace(string(out[:]))
+}
+
 func main() {
 
-	data, err := ioutil.ReadFile("/home/chris/.config/go-syncer/config.json")
+	data, err := ioutil.ReadFile(realPath("~/.config/go-syncer/config.json"))
 	checkError(err)
 	var config Config
 	err = json.Unmarshal(data, &config)
 	checkError(err)
-	fmt.Println(config)
+
+	data, err = ioutil.ReadFile(realPath("~/.config/go-syncer/state.json"))
+	checkError(err)
+	var stateData StateData
+	err = json.Unmarshal(data, &stateData)
+	checkError(err)
 
 	b, err := ioutil.ReadFile("credentials.json")
-	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
-	}
+	checkError(err)
 
 	// If modifying these scopes, delete your previously saved token.json.
 	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
-	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
-	}
+	checkError(err)
 	client := getClient(clientConfig)
 
 	service, err := drive.New(client)
 	checkError(err)
 	listFilesCall := service.Files.List()
-	listFilesCall.Fields("files(name, id, parents)")
+	listFilesCall.Fields("files(name, id, parents, modifiedTime)")
 	driveFileList, err := listFilesCall.Do()
 	checkError(err)
-
-	fmt.Println(driveFileList)
 
 	goSyncerRoot := ""
 	mapFiles := map[string]*drive.File{}
 	for _, file := range driveFileList.Files {
-		fmt.Println(file)
-		fmt.Println(file.Name)
 		if file.Name == "Go-Syncer-Root" {
 			goSyncerRoot = file.Id
 			continue
 		}
 		mapFiles[file.Id] = file
-		if file.MimeType == "application/vnd.google-apps.folder" {
-
-		}
 	}
 	mapPaths := map[string]string{}
 	for id, file := range mapFiles {
@@ -141,24 +145,41 @@ func main() {
 		}
 		mapPaths[path] = id
 	}
-	fmt.Println(mapPaths)
 
 	for _, fileAsk := range config.FilesAsk {
-		out, err := exec.Command("bash", "-c", "realpath "+shellescape.StripUnsafe(fileAsk)).Output()
-		checkError(err)
-		realPath := strings.TrimSpace(string(out[:]))
-		fmt.Println(realPath)
+		fmt.Println(fileAsk)
+		realPath := realPath(fileAsk)
 		baseName := filepath.Base(fileAsk)
 		dirId, ok := mapPaths[filepath.Dir(fileAsk)]
-		fmt.Println(filepath.Dir(fileAsk))
-		fmt.Println(dirId)
-		fmt.Println(baseName)
-		id, ok := mapPaths[fileAsk]
+		fileId, ok := mapPaths[fileAsk]
 		if ok {
-			fmt.Println(id)
+			driveFile := mapFiles[fileId]
+			modTimeCloud, err := time.Parse("2006-01-02T15:04:05.000Z", driveFile.ModifiedTime)
+			checkError(err)
+			stats, err := os.Stat(realPath)
+			checkError(err)
+			modTimeLocal := stats.ModTime().UTC()
+			fmt.Println(modTimeLocal)
+			lastCloudUpdate, err := time.Parse("2006-01-02 15:04:05.000000000 +0000 UTC", stateData.FileStateData[fileAsk].LastCloudUpdate)
+			checkError(err)
+			if modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) || true {
+				// Upload file to cloud
+				f, err := os.Open(realPath)
+				checkError(err)
+				driveFile := &drive.File{
+					MimeType: driveFile.MimeType,
+					Name:     driveFile.Name,
+				}
+				fileUpdateCall := service.Files.Update(fileId, driveFile)
+				fileUpdateCall.Media(f)
+				_, err = fileUpdateCall.Do()
+				checkError(err)
+				fmt.Printf("File '%s' successfully updated", fileAsk)
+				stateData.FileStateData[fileAsk].LastCloudUpdate = time.Time.String(modTimeLocal)
+			}
+
 		} else {
 			f, err := os.Open(realPath)
-			// f, err := os.Open("/home/chris/.bashrc")
 			checkError(err)
 			defer f.Close()
 
@@ -170,7 +191,7 @@ func main() {
 			fmt.Printf("File '%s' successfully uploaded", fileAsk)
 		}
 	}
-
+	fmt.Println(stateData.FileStateData["~/.bashrc"])
 }
 
 func createDir(service *drive.Service, name string, parentId string) (*drive.File, error) {
