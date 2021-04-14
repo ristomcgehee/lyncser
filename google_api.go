@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 )
 
@@ -70,6 +72,30 @@ func saveToken(path string, token *oauth2.Token) {
 	}
 	defer f.Close()
 	json.NewEncoder(f).Encode(token)
+}
+
+// Returns a service that can be used to make API calls
+func getService() *drive.Service {
+	b, err := ioutil.ReadFile(realPath(credentialsFilePath))
+	checkError(err)
+
+	// If modifying these scopes, delete your previously saved token.json.
+	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
+	checkError(err)
+	client := getClient(clientConfig)
+
+	service, err := drive.New(client)
+	checkError(err)
+	return service
+}
+
+// Gets the list of file that this app has access to
+func getFileList(service *drive.Service) *drive.FileList {
+	listFilesCall := service.Files.List()
+	listFilesCall.Fields("files(name, id, parents, modifiedTime)")
+	driveFileList, err := listFilesCall.Do()
+	checkError(err)
+	return driveFileList
 }
 
 // Creates a directory in Google Drive. Also creates any necessary parent directories.

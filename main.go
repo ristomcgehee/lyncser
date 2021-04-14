@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 )
 
@@ -45,20 +44,8 @@ func main() {
 	err = json.Unmarshal(data, &stateData)
 	checkError(err)
 
-	b, err := ioutil.ReadFile(realPath(credentialsFilePath))
-	checkError(err)
-
-	// If modifying these scopes, delete your previously saved token.json.
-	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
-	checkError(err)
-	client := getClient(clientConfig)
-
-	service, err := drive.New(client)
-	checkError(err)
-	listFilesCall := service.Files.List()
-	listFilesCall.Fields("files(name, id, parents, modifiedTime)")
-	driveFileList, err := listFilesCall.Do()
-	checkError(err)
+	service := getService()
+	driveFileList := getFileList(service)
 
 	goSyncerRoot := ""
 	mapFiles := map[string]*drive.File{}
