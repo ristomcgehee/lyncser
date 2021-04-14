@@ -90,7 +90,6 @@ func main() {
 	checkError(err)
 	err = ioutil.WriteFile(realPath(stateFilePath), data, 0644)
 	checkError(err)
-	// fmt.Println(stateData.FileStateData["~/.bashrc"])
 }
 
 // Creates the file if it does not exist in Google Drive, otherwise downloads or uploads the file to Google Drive
@@ -111,7 +110,7 @@ func handleFile(fileAsk string, mapPaths map[string]string, mapFiles map[string]
 	dirId := mapPaths[filepath.Dir(fileAsk)]
 	fileId, ok := mapPaths[fileAsk]
 	if ok {
-		syncExistingFile(fileAsk, fileId, fileStats, mapFiles, stateData, service)
+		syncExistingFile(fileAsk, fileId, !fileNotExists, fileStats, mapFiles, stateData, service)
 	} else {
 		if fileNotExists {
 			return
@@ -130,17 +129,19 @@ func handleFile(fileAsk string, mapPaths map[string]string, mapFiles map[string]
 }
 
 // Uploads/downloads the file as necessary
-func syncExistingFile(fileAsk string, fileId string, fileStats fs.FileInfo, mapFiles map[string]*drive.File, stateData *StateData, service *drive.Service) {
+func syncExistingFile(fileAsk string, fileId string, fileExists bool, fileStats fs.FileInfo, mapFiles map[string]*drive.File, stateData *StateData, service *drive.Service) {
 	realPath := realPath(fileAsk)
 	driveFile := mapFiles[fileId]
 	modTimeCloud, err := time.Parse(timeFormat, driveFile.ModifiedTime)
 	checkError(err)
 	var modTimeLocal time.Time
-	modTimeLocal = fileStats.ModTime().UTC()
+	if fileExists {
+		modTimeLocal = fileStats.ModTime().UTC()
+	}
 	lastCloudUpdate, err := time.Parse(timeFormat, stateData.FileStateData[fileAsk].LastCloudUpdate)
 	checkError(err)
 
-	if modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) {
+	if fileExists && modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) {
 		// Upload file to cloud
 		f, err := os.Open(realPath)
 		checkError(err)
@@ -154,12 +155,16 @@ func syncExistingFile(fileAsk string, fileId string, fileStats fs.FileInfo, mapF
 		checkError(err)
 		fmt.Printf("File '%s' successfully uploaded\n", fileAsk)
 		stateData.FileStateData[fileAsk].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
-	} else if modTimeCloud.After(lastCloudUpdate) {
+	} else if !fileExists || modTimeCloud.After(lastCloudUpdate) {
 		// Download from cloud
 		fileGetCall := service.Files.Get(fileId)
 		resp, err := fileGetCall.Download()
 		checkError(err)
 		defer resp.Body.Close()
+		dirName := filepath.Dir(realPath)
+		if !pathExists(dirName) {
+			os.MkdirAll(dirName, 0766)
+		}
 		out, err := os.OpenFile(realPath, os.O_WRONLY|os.O_CREATE, 0644)
 		checkError(err)
 		defer out.Close()
