@@ -16,8 +16,8 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-const credentialsFilePath = "~/.config/go-syncer/credentials.json"
-const tokenFilePath = "~/.config/go-syncer/token.json"
+const credentialsFilePath = "~/.config/lyncser/credentials.json"
+const tokenFilePath = "~/.config/lyncser/token.json"
 
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) *http.Client {
@@ -99,9 +99,10 @@ func getFileList(service *drive.Service) *drive.FileList {
 }
 
 // Creates a directory in Google Drive. Also creates any necessary parent directories.
-func createDir(service *drive.Service, name string, mapPaths map[string]string, goSyncerRoot string) string {
+// Returns the Id of the directory created.
+func createDir(service *drive.Service, name string, mapPaths map[string]string, lyncserRoot string) string {
 	if name == "" || name == "." || name == "/" {
-		return goSyncerRoot
+		return lyncserRoot
 	}
 	dirId, ok := mapPaths[name]
 	if ok {
@@ -111,13 +112,16 @@ func createDir(service *drive.Service, name string, mapPaths map[string]string, 
 	fmt.Println(parent)
 	parentId, ok := mapPaths[parent]
 	if !ok {
+		fmt.Println(parent)
 		// The parent directory does not exist either. Recursively create it.
-		parentId = createDir(service, parent, mapPaths, goSyncerRoot)
+		parentId = createDir(service, parent, mapPaths, lyncserRoot)
 	}
 	d := &drive.File{
 		Name:     filepath.Base(name),
 		MimeType: "application/vnd.google-apps.folder",
-		Parents:  []string{parentId},
+	}
+	if parentId != "" {
+		d.Parents = []string{parentId}
 	}
 
 	file, err := service.Files.Create(d).Do()

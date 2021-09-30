@@ -1,5 +1,5 @@
-# go-syncer
+# Lyncser
 
 ## TODO:
-Walk directories
-Generate state.json
+- Walk directories
+- Install as service
