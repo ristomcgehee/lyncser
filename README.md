@@ -2,4 +2,8 @@
 
 ## TODO:
 - Walk directories
-- Install as service
+
+## Install
+
+### Ubuntu
+install/install.sh

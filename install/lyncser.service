@@ -1,0 +1,10 @@
+[Unit]
+Description=Lyncser file syncing application
+After=network.target
+
+[Service]
+User=###user###
+ExecStart=/usr/local/bin/lyncser
+
+[Install]
+WantedBy=multi-user.target
