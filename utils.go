@@ -2,16 +2,14 @@ package main
 
 import (
 	"os"
-	"os/exec"
-	"strings"
-
-	"github.com/alessio/shellescape"
+	
+	"mvdan.cc/sh/v3/shell"
 )
 
 func realPath(path string) string {
-	out, err := exec.Command("bash", "-c", "readlink -m "+shellescape.StripUnsafe(path)).Output()
+	out, err := shell.Fields(path, nil)
 	checkError(err)
-	return strings.TrimSpace(string(out[:]))
+	return out[0]
 }
 
 func checkError(err error) {

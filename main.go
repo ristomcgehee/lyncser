@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"google.golang.org/api/drive/v3"
@@ -25,7 +26,7 @@ const (
 )
 
 type GlobalConfig struct {
-	TagFiles map[string][]string `yaml:"files"`
+	TagPaths map[string][]string `yaml:"paths"`
 }
 
 type LocalConfig struct {
@@ -104,11 +105,11 @@ func main() {
 	stateData := getStateData()
 
 	service := getService()
-	driveFileList := getFileList(service)
+	driveFiles := getFileList(service)
 
 	lyncserRoot := ""
 	mapFiles := map[string]*drive.File{}
-	for _, file := range driveFileList.Files {
+	for _, file := range driveFiles {
 		if file.Name == lyncserRootName {
 			lyncserRoot = file.Id
 			continue
@@ -134,12 +135,21 @@ func main() {
 		mapPaths[path] = id
 	}
 
-	for tag, files := range globalConfig.TagFiles {
+	for tag, paths := range globalConfig.TagPaths {
 		if !inSlice(tag, localConfig.Tags) {
 			continue
 		}
-		for _, fileName := range files {
-			handleFile(fileName, mapPaths, mapFiles, &stateData, service, lyncserRoot)
+		for _, pathToSync := range paths {
+			realpath := realPath(pathToSync)
+			filepath.WalkDir(realpath, func(path string, d fs.DirEntry, err error) error {
+				checkError(err)
+				if d.IsDir() {
+					return nil
+				}
+				path = strings.Replace(path, realpath, pathToSync, 1)
+				handleFile(path, mapPaths, mapFiles, &stateData, service, lyncserRoot)
+				return nil
+			})
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
@@ -163,9 +173,13 @@ func handleFile(fileName string, mapPaths map[string]string, mapFiles map[string
 	fmt.Println(fileName)
 	realPath := realPath(fileName)
 	fileStats, err := os.Stat(realPath)
-	fileExistsLocally := !errors.Is(err, os.ErrNotExist)
-	if fileExistsLocally {
-		checkError(err)
+	fileExistsLocally := true
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fileExistsLocally = false
+		} else {
+			checkError(err)
+		}
 	}
 	if _, ok := stateData.FileStateData[fileName]; !ok {
 		stateData.FileStateData[fileName] = &FileStateData{

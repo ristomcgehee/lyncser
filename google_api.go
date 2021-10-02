@@ -90,12 +90,21 @@ func getService() *drive.Service {
 }
 
 // Gets the list of file that this app has access to
-func getFileList(service *drive.Service) *drive.FileList {
+func getFileList(service *drive.Service) []*drive.File {
 	listFilesCall := service.Files.List()
-	listFilesCall.Fields("files(name, id, parents, modifiedTime)")
-	driveFileList, err := listFilesCall.Do()
-	checkError(err)
-	return driveFileList
+	listFilesCall.Fields("files(name, id, parents, modifiedTime), nextPageToken")
+	listFilesCall.Q("trashed=false")
+	var files []*drive.File
+	for true {
+		driveFileList, err := listFilesCall.Do()
+		checkError(err)
+		files = append(files, driveFileList.Files...)
+		if driveFileList.NextPageToken == "" {
+			break
+		}
+		listFilesCall.PageToken(driveFileList.NextPageToken)
+	}
+	return files
 }
 
 // Creates a directory in Google Drive. Also creates any necessary parent directories.
@@ -109,10 +118,8 @@ func createDir(service *drive.Service, name string, mapPaths map[string]string, 
 		return dirId // This directory already exists
 	}
 	parent := filepath.Dir(name)
-	fmt.Println(parent)
 	parentId, ok := mapPaths[parent]
 	if !ok {
-		fmt.Println(parent)
 		// The parent directory does not exist either. Recursively create it.
 		parentId = createDir(service, parent, mapPaths, lyncserRoot)
 	}
@@ -126,7 +133,8 @@ func createDir(service *drive.Service, name string, mapPaths map[string]string, 
 
 	file, err := service.Files.Create(d).Do()
 	checkError(err)
-	fmt.Printf("Directory '%s' successfully uploaded\n", name)
+	fmt.Printf("Directory '%s' successfully created\n", name)
+	mapPaths[name] = file.Id
 	return file.Id
 }
 

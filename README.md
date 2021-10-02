@@ -1,7 +1,7 @@
 # Lyncser
 
 ## TODO:
-- Walk directories
+- 
 
 ## Install
 
