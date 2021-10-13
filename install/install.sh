@@ -2,9 +2,11 @@
 
 # This script installs lyncser as a systemd service.
 
+set -e
+
 DIR_SCRIPT=$(dirname -- "${BASH_SOURCE[0]}")
-logname
-echo $DIR_SCRIPT
+
+cp $DIR_SCRIPT/lyncser /usr/local/bin
 
 sudo cp $DIR_SCRIPT/lyncser.service /etc/systemd/system/lyncser.service
 sudo cp $DIR_SCRIPT/lyncser.timer /etc/systemd/system/lyncser.timer
