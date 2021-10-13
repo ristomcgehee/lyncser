@@ -16,10 +16,14 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
-const credentialsFilePath = "~/.config/lyncser/credentials.json"
-const tokenFilePath = "~/.config/lyncser/token.json"
+const (
+	// Path where OAuth client credentials are stored
+	credentialsFilePath = "~/.config/lyncser/credentials.json"
+	// Path where the OAuth token will be stored
+	tokenFilePath = "~/.config/lyncser/token.json"
+)
 
-// Retrieve a token, saves the token, then returns the generated client.
+// getClient retrieves a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
@@ -33,7 +37,7 @@ func getClient(config *oauth2.Config) *http.Client {
 	return config.Client(context.Background(), tok)
 }
 
-// Request a token from the web, then returns the retrieved token.
+// getTokenFromWeb requests a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
@@ -51,7 +55,7 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 	return tok
 }
 
-// Retrieves a token from a local file.
+// tokenFromFile retrieves a token from a local file.
 func tokenFromFile(file string) (*oauth2.Token, error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -63,7 +67,7 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 	return tok, err
 }
 
-// Saves a token to a file path.
+// saveToken saves a token to a file path.
 func saveToken(path string, token *oauth2.Token) {
 	fmt.Printf("Saving credential file to: %s\n", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
@@ -74,7 +78,7 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-// Returns a service that can be used to make API calls
+// getService returns a service that can be used to make API calls
 func getService() *drive.Service {
 	b, err := ioutil.ReadFile(realPath(credentialsFilePath))
 	checkError(err)
@@ -89,7 +93,7 @@ func getService() *drive.Service {
 	return service
 }
 
-// Gets the list of file that this app has access to
+// getFileList gets the list of file that this app has access to.
 func getFileList(service *drive.Service) []*drive.File {
 	listFilesCall := service.Files.List()
 	listFilesCall.Fields("files(name, id, parents, modifiedTime), nextPageToken")
@@ -107,7 +111,7 @@ func getFileList(service *drive.Service) []*drive.File {
 	return files
 }
 
-// Creates a directory in Google Drive. Also creates any necessary parent directories.
+// createDir creates a directory in Google Drive. Also creates any necessary parent directories.
 // Returns the Id of the directory created.
 func createDir(service *drive.Service, name string, mapPaths map[string]string, lyncserRoot string) string {
 	if name == "" || name == "." || name == "/" {
@@ -138,7 +142,7 @@ func createDir(service *drive.Service, name string, mapPaths map[string]string, 
 	return file.Id
 }
 
-// Creates the file in Google Drive
+// createFile creates the file in Google Drive.
 func createFile(service *drive.Service, name string, mimeType string, content io.Reader, parentId string) (*drive.File, error) {
 	f := &drive.File{
 		MimeType: mimeType,

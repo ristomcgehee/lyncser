@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script installs lyncser as a systemd service.
+
 DIR_SCRIPT=$(dirname -- "${BASH_SOURCE[0]}")
 logname
 echo $DIR_SCRIPT
