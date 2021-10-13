@@ -35,3 +35,10 @@ docker-interactive: build
 		-v $(shell realpath ~/.config/lyncser/token.json):/root/.config/lyncser/token.json \
 		-v $(shell realpath ~/.config/lyncser/credentials.json):/root/.config/lyncser/credentials.json \
 		lyncser 
+
+RELEASE_DIR := $(shell mktemp -d)
+release: build
+	rm -f lyncser-amd64.tar.gz
+	mkdir $(RELEASE_DIR)/lyncser
+	cp lyncser install/* $(RELEASE_DIR)/lyncser
+	tar czf lyncser-amd64.tar.gz --directory=$(RELEASE_DIR) .
