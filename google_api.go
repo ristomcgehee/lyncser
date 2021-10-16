@@ -111,22 +111,8 @@ func getFileList(service *drive.Service) []*drive.File {
 	return files
 }
 
-// createDir creates a directory in Google Drive. Also creates any necessary parent directories.
-// Returns the Id of the directory created.
-func createDir(service *drive.Service, name string, mapPaths map[string]string, lyncserRoot string) string {
-	if name == "" || name == "." || name == "/" {
-		return lyncserRoot
-	}
-	dirId, ok := mapPaths[name]
-	if ok {
-		return dirId // This directory already exists
-	}
-	parent := filepath.Dir(name)
-	parentId, ok := mapPaths[parent]
-	if !ok {
-		// The parent directory does not exist either. Recursively create it.
-		parentId = createDir(service, parent, mapPaths, lyncserRoot)
-	}
+// createDir creates a directory in Google Drive. Returns the Id of the directory created.
+func createDir(service *drive.Service, name, parentId string) string {
 	d := &drive.File{
 		Name:     filepath.Base(name),
 		MimeType: "application/vnd.google-apps.folder",
@@ -138,7 +124,6 @@ func createDir(service *drive.Service, name string, mapPaths map[string]string, 
 	file, err := service.Files.Create(d).Do()
 	panicError(err)
 	fmt.Printf("Directory '%s' successfully created\n", name)
-	mapPaths[name] = file.Id
 	return file.Id
 }
 

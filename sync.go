@@ -3,20 +3,30 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"google.golang.org/api/drive/v3"
 )
 
 const (
-	timeFormat      = "2006-01-02T15:04:05.000Z"
-	lyncserRootName = "Lyncser-Root"
+	timeFormat = "2006-01-02T15:04:05.000Z"
 )
+
+type FileStore interface {
+	initialize()
+	createFile(path SyncedFile)
+	updateFile(path SyncedFile)
+	downloadFile(path SyncedFile)
+	getCloudModifiedTime(path SyncedFile) time.Time
+	fileExistsCloud(path SyncedFile) bool
+}
+
+type SyncedFile struct {
+	friendlyPath string
+	realPath     string
+}
 
 // performSync does the entire sync from end to end.
 func performSync() {
@@ -24,36 +34,8 @@ func performSync() {
 	localConfig := getLocalConfig()
 	stateData := getStateData()
 
-	service := getService()
-	driveFiles := getFileList(service)
-
-	lyncserRoot := ""
-	mapFiles := map[string]*drive.File{}
-	for _, file := range driveFiles {
-		if file.Name == lyncserRootName {
-			lyncserRoot = file.Id
-			continue
-		}
-		mapFiles[file.Id] = file
-	}
-
-	mapPaths := map[string]string{}
-	if lyncserRoot == "" {
-		lyncserRoot = createDir(service, lyncserRootName, mapPaths, lyncserRoot)
-	}
-
-	for id, file := range mapFiles {
-		parentId := file.Parents[0]
-		path := file.Name
-		for true {
-			if parentId == lyncserRoot {
-				break
-			}
-			path = mapFiles[parentId].Name + "/" + path
-			parentId = mapFiles[parentId].Parents[0]
-		}
-		mapPaths[path] = id
-	}
+	fileStore := &DriveFileStore{}
+	fileStore.initialize()
 
 	for tag, paths := range globalConfig.TagPaths {
 		if !inSlice(tag, localConfig.Tags) {
@@ -67,18 +49,18 @@ func performSync() {
 					return nil
 				}
 				path = strings.Replace(path, realpath, pathToSync, 1)
-				handleFile(path, mapPaths, mapFiles, &stateData, service, lyncserRoot)
+				handleFile(path, &stateData, fileStore)
 				return nil
 			})
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
-	handleFile(globalConfigPath, mapPaths, mapFiles, &stateData, service, lyncserRoot)
+	handleFile(globalConfigPath, &stateData, fileStore)
 
 	saveStateData(stateData)
 }
 
-// inSlice returns true if item is presint in slice.
+// inSlice returns true if item is present in slice.
 func inSlice(item string, slice []string) bool {
 	for _, sliceItem := range slice {
 		if item == sliceItem {
@@ -88,12 +70,14 @@ func inSlice(item string, slice []string) bool {
 	return false
 }
 
-// Creates the file if it does not exist in Google Drive, otherwise downloads or uploads the file to Google Drive
-func handleFile(fileName string, mapPaths map[string]string, mapFiles map[string]*drive.File, stateData *StateData,
-	service *drive.Service, lyncserRoot string) {
-	fmt.Println(fileName)
-	realPath := realPath(fileName)
-	fileStats, err := os.Stat(realPath)
+// Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
+func handleFile(fileName string, stateData *StateData, fileStore FileStore) {
+	file := SyncedFile{
+		friendlyPath: fileName,
+		realPath:     realPath(fileName),
+	}
+	fmt.Println("Syncing", fileName)
+	fileStats, err := os.Stat(file.realPath)
 	fileExistsLocally := true
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -107,71 +91,35 @@ func handleFile(fileName string, mapPaths map[string]string, mapFiles map[string
 			LastCloudUpdate: "2000-01-01T01:01:01.000Z",
 		}
 	}
-	baseName := filepath.Base(fileName)
-	dirId := mapPaths[filepath.Dir(fileName)]
-	fileId, fileExistsCloud := mapPaths[fileName]
-	if fileExistsCloud {
-		syncExistingFile(fileName, fileId, fileExistsLocally, fileStats, mapFiles, stateData, service)
+	if fileStore.fileExistsCloud(file) {
+		syncExistingFile(file, fileExistsLocally, fileStats, stateData, fileStore)
+		stateData.FileStateData[file.friendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
 	} else {
 		if !fileExistsLocally {
 			return
 		}
-		f, err := os.Open(realPath)
-		panicError(err)
-		defer f.Close()
-
-		dirId = createDir(service, filepath.Dir(fileName), mapPaths, lyncserRoot)
-		_, err = createFile(service, baseName, "text/plain", f, dirId)
-		panicError(err)
-
-		fmt.Printf("File '%s' successfully created\n", fileName)
-		stateData.FileStateData[fileName].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
+		fileStore.createFile(file)
+		fmt.Printf("File '%s' successfully created\n", file.friendlyPath)
+		stateData.FileStateData[file.friendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
 	}
 }
 
 // syncExistingFile uploads/downloads the file as necessary
-func syncExistingFile(fileName, fileId string, fileExistsLocally bool, fileStats fs.FileInfo,
-	mapFiles map[string]*drive.File, stateData *StateData, service *drive.Service) {
-	realPath := realPath(fileName)
-	driveFile := mapFiles[fileId]
-	modTimeCloud, err := time.Parse(timeFormat, driveFile.ModifiedTime)
-	panicError(err)
+func syncExistingFile(file SyncedFile, fileExistsLocally bool, fileStats fs.FileInfo, stateData *StateData,
+	fileStore FileStore) {
+	modTimeCloud := fileStore.getCloudModifiedTime(file)
 	var modTimeLocal time.Time
 	if fileExistsLocally {
 		modTimeLocal = fileStats.ModTime().UTC()
 	}
-	lastCloudUpdate, err := time.Parse(timeFormat, stateData.FileStateData[fileName].LastCloudUpdate)
+	lastCloudUpdate, err := time.Parse(timeFormat, stateData.FileStateData[file.friendlyPath].LastCloudUpdate)
 	panicError(err)
 
 	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) && lastCloudUpdate.Year() > 2001 {
-		// Upload file to cloud
-		f, err := os.Open(realPath)
-		panicError(err)
-		driveFile := &drive.File{
-			MimeType: driveFile.MimeType,
-			Name:     driveFile.Name,
-		}
-		fileUpdateCall := service.Files.Update(fileId, driveFile)
-		fileUpdateCall.Media(f)
-		_, err = fileUpdateCall.Do()
-		panicError(err)
-		fmt.Printf("File '%s' successfully uploaded\n", fileName)
+		fileStore.updateFile(file)
+		fmt.Printf("File '%s' successfully uploaded\n", file.friendlyPath)
 	} else if !fileExistsLocally || modTimeCloud.After(lastCloudUpdate) {
-		// Download from cloud
-		fileGetCall := service.Files.Get(fileId)
-		resp, err := fileGetCall.Download()
-		panicError(err)
-		defer resp.Body.Close()
-		dirName := filepath.Dir(realPath)
-		if !pathExists(dirName) {
-			os.MkdirAll(dirName, 0766)
-		}
-		out, err := os.OpenFile(realPath, os.O_WRONLY|os.O_CREATE, 0644)
-		panicError(err)
-		defer out.Close()
-		_, err = io.Copy(out, resp.Body)
-		panicError(err)
-		fmt.Printf("File '%s' successfully downloaded\n", fileName)
+		fileStore.downloadFile(file)
+		fmt.Printf("File '%s' successfully downloaded\n", file.friendlyPath)
 	}
-	stateData.FileStateData[fileName].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
 }
