@@ -44,8 +44,11 @@ func performSync() {
 		for _, pathToSync := range paths {
 			realpath := realPath(pathToSync)
 			filepath.WalkDir(realpath, func(path string, d fs.DirEntry, err error) error {
-				panicError(err)
-				if d.IsDir() {
+				var pathError *fs.PathError
+				if errors.As(err, &pathError) && pathError.Err.Error() != "no such file or directory" {
+					panicError(err)
+				}
+				if d != nil && d.IsDir() {
 					return nil
 				}
 				path = strings.Replace(path, realpath, pathToSync, 1)

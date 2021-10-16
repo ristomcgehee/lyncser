@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,13 +25,17 @@ const (
 )
 
 // getClient retrieves a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config) *http.Client {
+func getClient(config *oauth2.Config, forceNewToken bool) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
 	tokFile := realPath(tokenFilePath)
-	tok, err := tokenFromFile(tokFile)
-	if err != nil {
+	var tok *oauth2.Token
+	var err error
+	if !forceNewToken {
+		tok, err = tokenFromFile(tokFile)
+	}
+	if err != nil || forceNewToken {
 		tok = getTokenFromWeb(config)
 		saveToken(tokFile, tok)
 	}
@@ -79,40 +84,58 @@ func saveToken(path string, token *oauth2.Token) {
 }
 
 // getService returns a service that can be used to make API calls
-func getService() *drive.Service {
+func getService(forceNewToken bool) *drive.Service {
 	b, err := ioutil.ReadFile(realPath(credentialsFilePath))
 	panicError(err)
 
-	// If modifying these scopes, delete your previously saved token.json.
+	// If modifying these scopes, delete the previously saved token.json.
 	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
 	panicError(err)
-	client := getClient(clientConfig)
+	client := getClient(clientConfig, forceNewToken)
 
 	service, err := drive.New(client)
 	panicError(err)
 	return service
 }
 
+// isTokenInvalid returns true if the error is for an invalid token.
+func isTokenInvalid(err error) bool {
+	var oauthError *oauth2.RetrieveError
+	if errors.As(err, &oauthError) {
+		r := struct {
+			Error            string `json:"error"`
+			ErrorDescription string `json:"error_description"`
+		}{}
+		if err := json.Unmarshal(oauthError.Body, &r); err != io.EOF {
+			panicError(err)
+		}
+		return r.Error == "invalid_grant"
+	}
+	return false
+}
+
 // getFileList gets the list of file that this app has access to.
-func getFileList(service *drive.Service) []*drive.File {
+func getFileList(service *drive.Service) ([]*drive.File, error) {
 	listFilesCall := service.Files.List()
 	listFilesCall.Fields("files(name, id, parents, modifiedTime), nextPageToken")
 	listFilesCall.Q("trashed=false")
 	var files []*drive.File
 	for true {
 		driveFileList, err := listFilesCall.Do()
-		panicError(err)
+		if err != nil {
+			return nil, err
+		}
 		files = append(files, driveFileList.Files...)
 		if driveFileList.NextPageToken == "" {
 			break
 		}
 		listFilesCall.PageToken(driveFileList.NextPageToken)
 	}
-	return files
+	return files, nil
 }
 
 // createDir creates a directory in Google Drive. Returns the Id of the directory created.
-func createDir(service *drive.Service, name, parentId string) string {
+func createDir(service *drive.Service, name, parentId string) (string, error) {
 	d := &drive.File{
 		Name:     filepath.Base(name),
 		MimeType: "application/vnd.google-apps.folder",
@@ -122,9 +145,11 @@ func createDir(service *drive.Service, name, parentId string) string {
 	}
 
 	file, err := service.Files.Create(d).Do()
-	panicError(err)
+	if err != nil {
+		return "", err
+	}
 	fmt.Printf("Directory '%s' successfully created\n", name)
-	return file.Id
+	return file.Id, nil
 }
 
 // createFile creates the file in Google Drive.
@@ -135,6 +160,33 @@ func createFile(service *drive.Service, name string, mimeType string, content io
 		Parents:  []string{parentId},
 	}
 	file, err := service.Files.Create(f).Media(content).Do()
-	panicError(err)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+// downloadFileContents returns the contents of the file as an io.ReadCloser.
+func downloadFileContents(service *drive.Service, fileId string) (io.ReadCloser, error) {
+	fileGetCall := service.Files.Get(fileId)
+	resp, err := fileGetCall.Download()
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
+
+// updateFileContents uploads the contents from the io.Reader.
+func updateFileContents(service *drive.Service, driveFile *drive.File, fileId string, r io.Reader) (*drive.File, error) {
+	driveFile = &drive.File{
+		MimeType: driveFile.MimeType,
+		Name:     driveFile.Name,
+	}
+	fileUpdateCall := service.Files.Update(fileId, driveFile)
+	fileUpdateCall.Media(r)
+	file, err := fileUpdateCall.Do()
+	if err != nil {
+		return nil, err
+	}
 	return file, nil
 }
