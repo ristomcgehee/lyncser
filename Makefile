@@ -1,6 +1,7 @@
 
 build:
-	go build
+# -gcflags=-G=3 is for generics support. That option can probably be removed for Go 1.18.
+	go build -gcflags=-G=3
 
 run: build
 	./lyncser
