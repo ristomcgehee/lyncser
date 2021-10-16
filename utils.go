@@ -8,11 +8,12 @@ import (
 
 func realPath(path string) string {
 	out, err := shell.Fields(path, nil)
-	checkError(err)
+	panicError(err)
 	return out[0]
 }
 
-func checkError(err error) {
+// Panics if the error is not nil.
+func panicError(err error) {
 	if err != nil {
 		panic(err)
 	}
@@ -23,6 +24,6 @@ func pathExists(path string) bool {
 	if os.IsNotExist(err) {
 		return false
 	}
-	checkError(err)
+	panicError(err)
 	return true
 }

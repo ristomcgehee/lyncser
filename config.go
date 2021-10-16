@@ -49,13 +49,13 @@ func getGlobalConfig() GlobalConfig {
 		os.MkdirAll(configDir, 0700)
 		data = []byte("files:\n  all:\n    # - ~/.bashrc\n")
 		err = os.WriteFile(fullConfigPath, data, 0644)
-		checkError(err)
+		panicError(err)
 	} else {
-		checkError(err)
+		panicError(err)
 	}
 	var config GlobalConfig
 	err = yaml.Unmarshal(data, &config)
-	checkError(err)
+	panicError(err)
 	return config
 }
 
@@ -68,13 +68,13 @@ func getLocalConfig() LocalConfig {
 		os.MkdirAll(configDir, 0700)
 		data = []byte("tags:\n  - all\n")
 		err = os.WriteFile(fullConfigPath, data, 0644)
-		checkError(err)
+		panicError(err)
 	} else {
-		checkError(err)
+		panicError(err)
 	}
 	var config LocalConfig
 	err = yaml.Unmarshal(data, &config)
-	checkError(err)
+	panicError(err)
 	return config
 }
 
@@ -88,9 +88,9 @@ func getStateData() StateData {
 			FileStateData: map[string]*FileStateData{},
 		}
 	} else {
-		checkError(err)
+		panicError(err)
 		err = json.Unmarshal(data, &stateData)
-		checkError(err)
+		panicError(err)
 	}
 	return stateData
 }
@@ -98,7 +98,7 @@ func getStateData() StateData {
 // saveStateData will save the state data to disk.
 func saveStateData(stateData StateData) {
 	data, err := json.MarshalIndent(stateData, "", " ")
-	checkError(err)
+	panicError(err)
 	err = ioutil.WriteFile(realPath(stateFilePath), data, 0644)
-	checkError(err)
+	panicError(err)
 }

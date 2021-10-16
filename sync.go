@@ -62,7 +62,7 @@ func performSync() {
 		for _, pathToSync := range paths {
 			realpath := realPath(pathToSync)
 			filepath.WalkDir(realpath, func(path string, d fs.DirEntry, err error) error {
-				checkError(err)
+				panicError(err)
 				if d.IsDir() {
 					return nil
 				}
@@ -99,7 +99,7 @@ func handleFile(fileName string, mapPaths map[string]string, mapFiles map[string
 		if errors.Is(err, os.ErrNotExist) {
 			fileExistsLocally = false
 		} else {
-			checkError(err)
+			panicError(err)
 		}
 	}
 	if _, ok := stateData.FileStateData[fileName]; !ok {
@@ -117,12 +117,12 @@ func handleFile(fileName string, mapPaths map[string]string, mapFiles map[string
 			return
 		}
 		f, err := os.Open(realPath)
-		checkError(err)
+		panicError(err)
 		defer f.Close()
 
 		dirId = createDir(service, filepath.Dir(fileName), mapPaths, lyncserRoot)
 		_, err = createFile(service, baseName, "text/plain", f, dirId)
-		checkError(err)
+		panicError(err)
 
 		fmt.Printf("File '%s' successfully created\n", fileName)
 		stateData.FileStateData[fileName].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
@@ -135,18 +135,18 @@ func syncExistingFile(fileName, fileId string, fileExistsLocally bool, fileStats
 	realPath := realPath(fileName)
 	driveFile := mapFiles[fileId]
 	modTimeCloud, err := time.Parse(timeFormat, driveFile.ModifiedTime)
-	checkError(err)
+	panicError(err)
 	var modTimeLocal time.Time
 	if fileExistsLocally {
 		modTimeLocal = fileStats.ModTime().UTC()
 	}
 	lastCloudUpdate, err := time.Parse(timeFormat, stateData.FileStateData[fileName].LastCloudUpdate)
-	checkError(err)
+	panicError(err)
 
 	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) && lastCloudUpdate.Year() > 2001 {
 		// Upload file to cloud
 		f, err := os.Open(realPath)
-		checkError(err)
+		panicError(err)
 		driveFile := &drive.File{
 			MimeType: driveFile.MimeType,
 			Name:     driveFile.Name,
@@ -154,23 +154,23 @@ func syncExistingFile(fileName, fileId string, fileExistsLocally bool, fileStats
 		fileUpdateCall := service.Files.Update(fileId, driveFile)
 		fileUpdateCall.Media(f)
 		_, err = fileUpdateCall.Do()
-		checkError(err)
+		panicError(err)
 		fmt.Printf("File '%s' successfully uploaded\n", fileName)
 	} else if !fileExistsLocally || modTimeCloud.After(lastCloudUpdate) {
 		// Download from cloud
 		fileGetCall := service.Files.Get(fileId)
 		resp, err := fileGetCall.Download()
-		checkError(err)
+		panicError(err)
 		defer resp.Body.Close()
 		dirName := filepath.Dir(realPath)
 		if !pathExists(dirName) {
 			os.MkdirAll(dirName, 0766)
 		}
 		out, err := os.OpenFile(realPath, os.O_WRONLY|os.O_CREATE, 0644)
-		checkError(err)
+		panicError(err)
 		defer out.Close()
 		_, err = io.Copy(out, resp.Body)
-		checkError(err)
+		panicError(err)
 		fmt.Printf("File '%s' successfully downloaded\n", fileName)
 	}
 	stateData.FileStateData[fileName].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)

@@ -81,15 +81,15 @@ func saveToken(path string, token *oauth2.Token) {
 // getService returns a service that can be used to make API calls
 func getService() *drive.Service {
 	b, err := ioutil.ReadFile(realPath(credentialsFilePath))
-	checkError(err)
+	panicError(err)
 
 	// If modifying these scopes, delete your previously saved token.json.
 	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
-	checkError(err)
+	panicError(err)
 	client := getClient(clientConfig)
 
 	service, err := drive.New(client)
-	checkError(err)
+	panicError(err)
 	return service
 }
 
@@ -101,7 +101,7 @@ func getFileList(service *drive.Service) []*drive.File {
 	var files []*drive.File
 	for true {
 		driveFileList, err := listFilesCall.Do()
-		checkError(err)
+		panicError(err)
 		files = append(files, driveFileList.Files...)
 		if driveFileList.NextPageToken == "" {
 			break
@@ -136,7 +136,7 @@ func createDir(service *drive.Service, name string, mapPaths map[string]string, 
 	}
 
 	file, err := service.Files.Create(d).Do()
-	checkError(err)
+	panicError(err)
 	fmt.Printf("Directory '%s' successfully created\n", name)
 	mapPaths[name] = file.Id
 	return file.Id
@@ -150,6 +150,6 @@ func createFile(service *drive.Service, name string, mimeType string, content io
 		Parents:  []string{parentId},
 	}
 	file, err := service.Files.Create(f).Media(content).Do()
-	checkError(err)
+	panicError(err)
 	return file, nil
 }
