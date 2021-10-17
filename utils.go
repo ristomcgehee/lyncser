@@ -2,12 +2,14 @@ package main
 
 import (
 	"os"
-	
+	"strings"
+
 	"mvdan.cc/sh/v3/shell"
 )
 
 func realPath(path string) string {
-	out, err := shell.Fields(path, nil)
+	escapedPath := strings.ReplaceAll(path, "'", "\\'")
+	out, err := shell.Fields(escapedPath, nil)
 	panicError(err)
 	return out[0]
 }

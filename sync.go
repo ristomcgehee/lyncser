@@ -42,13 +42,14 @@ func performSync() {
 			continue
 		}
 		for _, pathToSync := range paths {
-			realpath := realPath(pathToSync)
+			realpath, err := filepath.EvalSymlinks(realPath(pathToSync))
+			panicError(err)
 			filepath.WalkDir(realpath, func(path string, d fs.DirEntry, err error) error {
 				var pathError *fs.PathError
 				if errors.As(err, &pathError) && pathError.Err.Error() != "no such file or directory" {
 					panicError(err)
 				}
-				if d != nil && d.IsDir() {
+				if d != nil && (d.IsDir() || !d.Type().IsRegular()) {
 					return nil
 				}
 				path = strings.Replace(path, realpath, pathToSync, 1)
@@ -75,11 +76,11 @@ func inSlice(item string, slice []string) bool {
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
 func handleFile(fileName string, stateData *StateData, fileStore FileStore) {
+	fmt.Println("Syncing", fileName)
 	file := SyncedFile{
 		friendlyPath: fileName,
 		realPath:     realPath(fileName),
 	}
-	fmt.Println("Syncing", fileName)
 	fileStats, err := os.Stat(file.realPath)
 	fileExistsLocally := true
 	if err != nil {
