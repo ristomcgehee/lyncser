@@ -6,6 +6,9 @@ build:
 run: build
 	./lyncser
 
+test:
+	go test -gcflags=-l sync/
+
 docker-build:
 	docker build -t lyncser .
 

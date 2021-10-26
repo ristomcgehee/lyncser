@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"os"
@@ -7,25 +7,29 @@ import (
 	"mvdan.cc/sh/v3/shell"
 )
 
-func realPath(path string) string {
+const (
+	TimeFormat = "2006-01-02T15:04:05.000Z"
+)
+
+func RealPath(path string) string {
 	escapedPath := strings.ReplaceAll(path, "'", "\\'")
 	out, err := shell.Fields(escapedPath, nil)
-	panicError(err)
+	PanicError(err)
 	return out[0]
 }
 
 // Panics if the error is not nil.
-func panicError(err error) {
+func PanicError(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
-func pathExists(path string) bool {
+func PathExists(path string) bool {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return false
 	}
-	panicError(err)
+	PanicError(err)
 	return true
 }

@@ -15,6 +15,8 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
+
+	"github.com/chrismcgehee/lyncser/utils"
 )
 
 const (
@@ -29,7 +31,7 @@ func getClient(config *oauth2.Config, forceNewToken bool) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
-	tokFile := realPath(tokenFilePath)
+	tokFile := utils.RealPath(tokenFilePath)
 	var tok *oauth2.Token
 	var err error
 	if !forceNewToken {
@@ -85,16 +87,16 @@ func saveToken(path string, token *oauth2.Token) {
 
 // getService returns a service that can be used to make API calls
 func getService(forceNewToken bool) *drive.Service {
-	b, err := ioutil.ReadFile(realPath(credentialsFilePath))
-	panicError(err)
+	b, err := ioutil.ReadFile(utils.RealPath(credentialsFilePath))
+	utils.PanicError(err)
 
 	// If modifying these scopes, delete the previously saved token.json.
 	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
-	panicError(err)
+	utils.PanicError(err)
 	client := getClient(clientConfig, forceNewToken)
 
 	service, err := drive.New(client)
-	panicError(err)
+	utils.PanicError(err)
 	return service
 }
 
@@ -107,7 +109,7 @@ func isTokenInvalid(err error) bool {
 			ErrorDescription string `json:"error_description"`
 		}{}
 		if err := json.Unmarshal(oauthError.Body, &r); err != io.EOF {
-			panicError(err)
+			utils.PanicError(err)
 		}
 		return r.Error == "invalid_grant"
 	}

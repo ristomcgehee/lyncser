@@ -3,6 +3,8 @@ module github.com/chrismcgehee/lyncser
 go 1.17
 
 require (
+	github.com/golang/mock v1.6.0
+	github.com/pasdam/mockit v0.0.0-20210922185819-a9ff66a7ee9a
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	google.golang.org/api v0.59.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
@@ -10,7 +12,8 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.97.0 // indirect
+	bou.ke/monkey v1.0.2 // indirect
+	cloud.google.com/go v0.94.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.1 // indirect

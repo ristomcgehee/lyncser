@@ -1,4 +1,4 @@
-package main
+package sync
 
 import (
 	"errors"
@@ -8,46 +8,29 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/chrismcgehee/lyncser/utils"
 )
 
-const (
-	timeFormat = "2006-01-02T15:04:05.000Z"
-)
-
-type FileStore interface {
-	initialize()
-	createFile(path SyncedFile)
-	updateFile(path SyncedFile)
-	downloadFile(path SyncedFile)
-	getCloudModifiedTime(path SyncedFile) time.Time
-	fileExistsCloud(path SyncedFile) bool
-}
-
-type SyncedFile struct {
-	friendlyPath string
-	realPath     string
-}
-
-// performSync does the entire sync from end to end.
-func performSync() {
+// PerformSync does the entire sync from end to end.
+func PerformSync(fileStore utils.FileStore) {
 	globalConfig := getGlobalConfig()
 	localConfig := getLocalConfig()
 	stateData := getStateData()
 
-	fileStore := &DriveFileStore{}
-	fileStore.initialize()
+	fileStore.Initialize()
 
 	for tag, paths := range globalConfig.TagPaths {
 		if !inSlice(tag, localConfig.Tags) {
 			continue
 		}
 		for _, pathToSync := range paths {
-			realpath, err := filepath.EvalSymlinks(realPath(pathToSync))
-			panicError(err)
+			realpath, err := filepath.EvalSymlinks(utils.RealPath(pathToSync))
+			utils.PanicError(err)
 			filepath.WalkDir(realpath, func(path string, d fs.DirEntry, err error) error {
 				var pathError *fs.PathError
 				if errors.As(err, &pathError) && pathError.Err.Error() != "no such file or directory" {
-					panicError(err)
+					utils.PanicError(err)
 				}
 				if d != nil && (d.IsDir() || !d.Type().IsRegular()) {
 					return nil
@@ -75,19 +58,19 @@ func inSlice(item string, slice []string) bool {
 }
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
-func handleFile(fileName string, stateData *StateData, fileStore FileStore) {
+func handleFile(fileName string, stateData *StateData, fileStore utils.FileStore) {
 	fmt.Println("Syncing", fileName)
-	file := SyncedFile{
-		friendlyPath: fileName,
-		realPath:     realPath(fileName),
+	file := utils.SyncedFile{
+		FriendlyPath: fileName,
+		RealPath:     utils.RealPath(fileName),
 	}
-	fileStats, err := os.Stat(file.realPath)
+	fileStats, err := os.Stat(file.RealPath)
 	fileExistsLocally := true
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			fileExistsLocally = false
 		} else {
-			panicError(err)
+			utils.PanicError(err)
 		}
 	}
 	if _, ok := stateData.FileStateData[fileName]; !ok {
@@ -95,35 +78,35 @@ func handleFile(fileName string, stateData *StateData, fileStore FileStore) {
 			LastCloudUpdate: "2000-01-01T01:01:01.000Z",
 		}
 	}
-	if fileStore.fileExistsCloud(file) {
+	if fileStore.FileExistsCloud(file) {
 		syncExistingFile(file, fileExistsLocally, fileStats, stateData, fileStore)
-		stateData.FileStateData[file.friendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
+		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), utils.TimeFormat)
 	} else {
 		if !fileExistsLocally {
 			return
 		}
-		fileStore.createFile(file)
-		fmt.Printf("File '%s' successfully created\n", file.friendlyPath)
-		stateData.FileStateData[file.friendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), timeFormat)
+		fileStore.CreateFile(file)
+		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
+		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), utils.TimeFormat)
 	}
 }
 
 // syncExistingFile uploads/downloads the file as necessary
-func syncExistingFile(file SyncedFile, fileExistsLocally bool, fileStats fs.FileInfo, stateData *StateData,
-	fileStore FileStore) {
-	modTimeCloud := fileStore.getCloudModifiedTime(file)
+func syncExistingFile(file utils.SyncedFile, fileExistsLocally bool, fileStats fs.FileInfo, stateData *StateData,
+	fileStore utils.FileStore) {
+	modTimeCloud := fileStore.GetCloudModifiedTime(file)
 	var modTimeLocal time.Time
 	if fileExistsLocally {
 		modTimeLocal = fileStats.ModTime().UTC()
 	}
-	lastCloudUpdate, err := time.Parse(timeFormat, stateData.FileStateData[file.friendlyPath].LastCloudUpdate)
-	panicError(err)
+	lastCloudUpdate, err := time.Parse(utils.TimeFormat, stateData.FileStateData[file.FriendlyPath].LastCloudUpdate)
+	utils.PanicError(err)
 
 	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) && lastCloudUpdate.Year() > 2001 {
-		fileStore.updateFile(file)
-		fmt.Printf("File '%s' successfully uploaded\n", file.friendlyPath)
+		fileStore.UpdateFile(file)
+		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
 	} else if !fileExistsLocally || modTimeCloud.After(lastCloudUpdate) {
-		fileStore.downloadFile(file)
-		fmt.Printf("File '%s' successfully downloaded\n", file.friendlyPath)
+		fileStore.DownloadFile(file)
+		fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
 	}
 }

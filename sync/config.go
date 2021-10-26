@@ -1,4 +1,4 @@
-package main
+package sync
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 	"path"
 
 	yaml "gopkg.in/yaml.v3"
+
+	"github.com/chrismcgehee/lyncser/utils"
 )
 
 const (
@@ -42,39 +44,39 @@ type FileStateData struct {
 
 // getGlobalConfig reads and parses the global config file. If it does not exist, it will create it.
 func getGlobalConfig() GlobalConfig {
-	fullConfigPath := realPath(globalConfigPath)
+	fullConfigPath := utils.RealPath(globalConfigPath)
 	data, err := ioutil.ReadFile(fullConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
 		configDir := path.Dir(fullConfigPath)
 		os.MkdirAll(configDir, 0700)
 		data = []byte("files:\n  all:\n    # - ~/.bashrc\n")
 		err = os.WriteFile(fullConfigPath, data, 0644)
-		panicError(err)
+		utils.PanicError(err)
 	} else {
-		panicError(err)
+		utils.PanicError(err)
 	}
 	var config GlobalConfig
 	err = yaml.Unmarshal(data, &config)
-	panicError(err)
+	utils.PanicError(err)
 	return config
 }
 
 // getLocalConfig reads and parses the local config file. If it does not exist, it will create it.
 func getLocalConfig() LocalConfig {
-	fullConfigPath := realPath(localConfigPath)
+	fullConfigPath := utils.RealPath(localConfigPath)
 	data, err := ioutil.ReadFile(fullConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
 		configDir := path.Dir(fullConfigPath)
 		os.MkdirAll(configDir, 0700)
 		data = []byte("tags:\n  - all\n")
 		err = os.WriteFile(fullConfigPath, data, 0644)
-		panicError(err)
+		utils.PanicError(err)
 	} else {
-		panicError(err)
+		utils.PanicError(err)
 	}
 	var config LocalConfig
 	err = yaml.Unmarshal(data, &config)
-	panicError(err)
+	utils.PanicError(err)
 	return config
 }
 
@@ -82,15 +84,15 @@ func getLocalConfig() LocalConfig {
 // a newly initialized struct.
 func getStateData() StateData {
 	var stateData StateData
-	data, err := ioutil.ReadFile(realPath(stateFilePath))
+	data, err := ioutil.ReadFile(utils.RealPath(stateFilePath))
 	if errors.Is(err, os.ErrNotExist) {
 		stateData = StateData{
 			FileStateData: map[string]*FileStateData{},
 		}
 	} else {
-		panicError(err)
+		utils.PanicError(err)
 		err = json.Unmarshal(data, &stateData)
-		panicError(err)
+		utils.PanicError(err)
 	}
 	return stateData
 }
@@ -98,7 +100,7 @@ func getStateData() StateData {
 // saveStateData will save the state data to disk.
 func saveStateData(stateData StateData) {
 	data, err := json.MarshalIndent(stateData, "", " ")
-	panicError(err)
-	err = ioutil.WriteFile(realPath(stateFilePath), data, 0644)
-	panicError(err)
+	utils.PanicError(err)
+	err = ioutil.WriteFile(utils.RealPath(stateFilePath), data, 0644)
+	utils.PanicError(err)
 }
