@@ -3,6 +3,7 @@ module github.com/chrismcgehee/lyncser
 go 1.17
 
 require (
+	github.com/go-bdd/gobdd v1.1.3
 	github.com/golang/mock v1.6.0
 	github.com/pasdam/mockit v0.0.0-20210922185819-a9ff66a7ee9a
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
@@ -14,6 +15,10 @@ require (
 require (
 	bou.ke/monkey v1.0.2 // indirect
 	cloud.google.com/go v0.94.1 // indirect
+	github.com/cucumber/gherkin-go/v13 v13.0.0 // indirect
+	github.com/cucumber/messages-go/v12 v12.0.0 // indirect
+	github.com/gofrs/uuid v4.0.0+incompatible // indirect
+	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
@@ -25,4 +30,5 @@ require (
 	google.golang.org/genproto v0.0.0-20211008145708-270636b82663 // indirect
 	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
