@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	time "time"
 
 	yaml "gopkg.in/yaml.v3"
 
@@ -39,7 +40,7 @@ type StateData struct {
 
 type FileStateData struct {
 	// The last time this file has been uploaded/downloaded from the cloud.
-	LastCloudUpdate string
+	LastCloudUpdate time.Time
 }
 
 // getGlobalConfig reads and parses the global config file. If it does not exist, it will create it.

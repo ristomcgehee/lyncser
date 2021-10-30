@@ -74,20 +74,21 @@ func handleFile(fileName string, stateData *StateData, fileStore utils.FileStore
 		}
 	}
 	if _, ok := stateData.FileStateData[fileName]; !ok {
+		neverUpdated, _ := time.Parse(utils.TimeFormat, "2000-01-01T01:01:01.000Z")
 		stateData.FileStateData[fileName] = &FileStateData{
-			LastCloudUpdate: "2000-01-01T01:01:01.000Z",
+			LastCloudUpdate: neverUpdated,
 		}
 	}
 	if fileStore.FileExistsCloud(file) {
 		syncExistingFile(file, fileExistsLocally, fileStats, stateData, fileStore)
-		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), utils.TimeFormat)
+		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	} else {
 		if !fileExistsLocally {
 			return
 		}
 		fileStore.CreateFile(file)
 		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
-		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Time.Format(time.Now().UTC(), utils.TimeFormat)
+		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	}
 }
 
@@ -99,8 +100,7 @@ func syncExistingFile(file utils.SyncedFile, fileExistsLocally bool, fileStats f
 	if fileExistsLocally {
 		modTimeLocal = fileStats.ModTime().UTC()
 	}
-	lastCloudUpdate, err := time.Parse(utils.TimeFormat, stateData.FileStateData[file.FriendlyPath].LastCloudUpdate)
-	utils.PanicError(err)
+	lastCloudUpdate := stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
 
 	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) && lastCloudUpdate.Year() > 2001 {
 		fileStore.UpdateFile(file)
