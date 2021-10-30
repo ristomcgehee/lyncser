@@ -17,10 +17,11 @@ func (l *LocalFileStore) Initialize() {
 // Creates this directory and any parent directories if they do not exist.
 // Returns the Google Drive file id for the directory.
 func (l *LocalFileStore) createDirIfNecessary(dirName string) string {
-	return ""
+	panic("not implemented")
 }
 
 func (l *LocalFileStore) CreateFile(file utils.SyncedFile) {
+	panic("not implemented")
 }
 
 func (l *LocalFileStore) GetModifiedTime(file utils.SyncedFile) time.Time {
@@ -30,9 +31,11 @@ func (l *LocalFileStore) GetModifiedTime(file utils.SyncedFile) time.Time {
 }
 
 func (l *LocalFileStore) UpdateFile(file utils.SyncedFile) {
+	panic("not implemented")
 }
 
 func (l *LocalFileStore) DownloadFile(file utils.SyncedFile) {
+	panic("not implemented")
 }
 
 func (l *LocalFileStore) FileExists(file utils.SyncedFile) bool {

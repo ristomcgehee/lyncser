@@ -30,6 +30,10 @@ func convertTime(timeStr string) time.Time {
 		timeToUse = "2021-10-01T08:00:00.000Z"
 	case "9 am":
 		timeToUse = "2021-10-01T09:00:00.000Z"
+	case "9:01 am":
+		timeToUse = "2021-10-01T09:01:00.000Z"
+	case "never":
+		timeToUse = "2000-01-01T00:00:00.000Z"
 	default:
 		panic(fmt.Sprintf("unrecognized time: %s", timeToUse))
 	}
@@ -43,7 +47,15 @@ func fileExistsInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile)).
-		Return(true)
+		Return(true).AnyTimes()
+}
+
+func fileDoesntExistInCloud(t gobdd.StepTest, ctx gobdd.Context) {
+	syncer, syncedFile := unwrapContext(ctx)
+	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore.EXPECT().
+		FileExists(gomock.Eq(syncedFile)).
+		Return(false).AnyTimes()
 }
 
 func fileExistsLocally(t gobdd.StepTest, ctx gobdd.Context) {
@@ -51,7 +63,15 @@ func fileExistsLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile)).
-		Return(true)
+		Return(true).AnyTimes()
+}
+
+func fileDoesntExistLocally(t gobdd.StepTest, ctx gobdd.Context) {
+	syncer, syncedFile := unwrapContext(ctx)
+	localFileStore := syncer.LocalFileStore.(*MockFileStore)
+	localFileStore.EXPECT().
+		FileExists(gomock.Eq(syncedFile)).
+		Return(false).AnyTimes()
 }
 
 func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
@@ -59,7 +79,7 @@ func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
 		GetModifiedTime(gomock.Eq(syncedFile)).
-		Return(convertTime(modifiedTime))
+		Return(convertTime(modifiedTime)).AnyTimes()
 }
 
 func localModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
@@ -67,7 +87,7 @@ func localModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
 		GetModifiedTime(gomock.Eq(syncedFile)).
-		Return(convertTime(modifiedTime))
+		Return(convertTime(modifiedTime)).AnyTimes()
 }
 
 func lastCloudUpdate(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
@@ -82,6 +102,20 @@ func fileUpdatedCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
 		UpdateFile(gomock.Eq(syncedFile))
+}
+
+func fileCreatedCloud(t gobdd.StepTest, ctx gobdd.Context) {
+	syncer, syncedFile := unwrapContext(ctx)
+	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore.EXPECT().
+		CreateFile(gomock.Eq(syncedFile))
+}
+
+func fileDownloadedFromCloud(t gobdd.StepTest, ctx gobdd.Context) {
+	syncer, syncedFile := unwrapContext(ctx)
+	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore.EXPECT().
+		DownloadFile(gomock.Eq(syncedFile))
 }
 
 func nothing(t gobdd.StepTest, ctx gobdd.Context) {
@@ -107,12 +141,23 @@ func TestScenarios(t *testing.T) {
 	}), gobdd.WithAfterScenario(func(ctx gobdd.Context) {
 		syncer.handleFile(syncedFile.FriendlyPath)
 	}))
-	suite.AddStep(`the file exists in the cloud`, fileExistsInCloud)
-	suite.AddStep(`the cloud modified time is {text}`, cloudModifiedTime)
+	suite.AddParameterTypes(`{text}`, []string{`"([\d\w\-\:\s]+)"`})
+
+	// local file
 	suite.AddStep(`the file exists locally`, fileExistsLocally)
+	suite.AddStep(`the file does not exist locally`, fileDoesntExistLocally)
 	suite.AddStep(`the local modified time is {text}`, localModifiedTime)
 	suite.AddStep(`the last cloud update was {text}`, lastCloudUpdate)
+	// cloud file
+	suite.AddStep(`the file exists in the cloud`, fileExistsInCloud)
+	suite.AddStep(`the file does not exist in the cloud`, fileDoesntExistInCloud)
+	suite.AddStep(`the cloud modified time is {text}`, cloudModifiedTime)
+	// actions
 	suite.AddStep(`the file should be updated to the cloud`, fileUpdatedCloud)
+	suite.AddStep(`the file should be created in the cloud`, fileCreatedCloud)
+	suite.AddStep(`the file should be downloaded from the cloud`, fileDownloadedFromCloud)
+	// other
 	suite.AddStep(`nothing should happen`, nothing)
+
 	suite.Run()
 }

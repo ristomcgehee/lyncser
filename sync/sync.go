@@ -78,15 +78,14 @@ func (s *Syncer) handleFile(fileName string) {
 	}
 	if s.RemoteFileStore.FileExists(file) {
 		s.syncExistingFile(file, fileExistsLocally)
-		s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	} else {
 		if !fileExistsLocally {
 			return
 		}
 		s.RemoteFileStore.CreateFile(file)
 		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
-		s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	}
+	s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 }
 
 // syncExistingFile uploads/downloads the file as necessary
