@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 	fs "io/fs"
 	time "time"
+	fmt "fmt"
 
 	gomock "github.com/golang/mock/gomock"
 )
@@ -318,9 +319,11 @@ func (mr *MockFileInfoMockRecorder) IsDir() *gomock.Call {
 
 // ModTime mocks base method.
 func (m *MockFileInfo) ModTime() time.Time {
+	fmt.Println("calling ModTime")
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ModTime")
 	ret0, _ := ret[0].(time.Time)
+	fmt.Println("done ModTime")
 	return ret0
 }
 

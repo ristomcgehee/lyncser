@@ -83,7 +83,7 @@ func getLocalConfig() LocalConfig {
 
 // getStateData reads and parses the state data file. If that file does not exist yet, this method will return
 // a newly initialized struct.
-func getStateData() StateData {
+func getStateData() *StateData {
 	var stateData StateData
 	data, err := ioutil.ReadFile(utils.RealPath(stateFilePath))
 	if errors.Is(err, os.ErrNotExist) {
@@ -95,11 +95,11 @@ func getStateData() StateData {
 		err = json.Unmarshal(data, &stateData)
 		utils.PanicError(err)
 	}
-	return stateData
+	return &stateData
 }
 
 // saveStateData will save the state data to disk.
-func saveStateData(stateData StateData) {
+func saveStateData(stateData *StateData) {
 	data, err := json.MarshalIndent(stateData, "", " ")
 	utils.PanicError(err)
 	err = ioutil.WriteFile(utils.RealPath(stateFilePath), data, 0644)

@@ -110,7 +110,7 @@ func (d *DriveFileStore) CreateFile(file utils.SyncedFile) {
 	}, d)
 }
 
-func (d *DriveFileStore) GetCloudModifiedTime(file utils.SyncedFile) time.Time {
+func (d *DriveFileStore) GetModifiedTime(file utils.SyncedFile) time.Time {
 	fileId := d.mapPathToFileId[file.FriendlyPath]
 	driveFile := d.mapIdToFile[fileId]
 	modTimeCloud, err := time.Parse(utils.TimeFormat, driveFile.ModifiedTime)
@@ -145,7 +145,7 @@ func (d *DriveFileStore) DownloadFile(file utils.SyncedFile) {
 	utils.PanicError(err)
 }
 
-func (d *DriveFileStore) FileExistsCloud(file utils.SyncedFile) bool {
+func (d *DriveFileStore) FileExists(file utils.SyncedFile) bool {
 	_, ok := d.mapPathToFileId[file.FriendlyPath]
 	return ok
 }

@@ -59,32 +59,32 @@ func (mr *MockFileStoreMockRecorder) DownloadFile(path interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadFile", reflect.TypeOf((*MockFileStore)(nil).DownloadFile), path)
 }
 
-// FileExistsCloud mocks base method.
-func (m *MockFileStore) FileExistsCloud(path utils.SyncedFile) bool {
+// FileExists mocks base method.
+func (m *MockFileStore) FileExists(path utils.SyncedFile) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FileExistsCloud", path)
+	ret := m.ctrl.Call(m, "FileExists", path)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// FileExistsCloud indicates an expected call of FileExistsCloud.
-func (mr *MockFileStoreMockRecorder) FileExistsCloud(path interface{}) *gomock.Call {
+// FileExists indicates an expected call of FileExists.
+func (mr *MockFileStoreMockRecorder) FileExists(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileExistsCloud", reflect.TypeOf((*MockFileStore)(nil).FileExistsCloud), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileExists", reflect.TypeOf((*MockFileStore)(nil).FileExists), path)
 }
 
-// GetCloudModifiedTime mocks base method.
-func (m *MockFileStore) GetCloudModifiedTime(path utils.SyncedFile) time.Time {
+// GetModifiedTime mocks base method.
+func (m *MockFileStore) GetModifiedTime(path utils.SyncedFile) time.Time {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCloudModifiedTime", path)
+	ret := m.ctrl.Call(m, "GetModifiedTime", path)
 	ret0, _ := ret[0].(time.Time)
 	return ret0
 }
 
-// GetCloudModifiedTime indicates an expected call of GetCloudModifiedTime.
-func (mr *MockFileStoreMockRecorder) GetCloudModifiedTime(path interface{}) *gomock.Call {
+// GetModifiedTime indicates an expected call of GetModifiedTime.
+func (mr *MockFileStoreMockRecorder) GetModifiedTime(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloudModifiedTime", reflect.TypeOf((*MockFileStore)(nil).GetCloudModifiedTime), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModifiedTime", reflect.TypeOf((*MockFileStore)(nil).GetModifiedTime), path)
 }
 
 // Initialize mocks base method.

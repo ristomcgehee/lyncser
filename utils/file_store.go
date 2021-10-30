@@ -7,8 +7,8 @@ type FileStore interface {
 	CreateFile(path SyncedFile)
 	UpdateFile(path SyncedFile)
 	DownloadFile(path SyncedFile)
-	GetCloudModifiedTime(path SyncedFile) time.Time
-	FileExistsCloud(path SyncedFile) bool
+	GetModifiedTime(path SyncedFile) time.Time
+	FileExists(path SyncedFile) bool
 }
 
 type SyncedFile struct {

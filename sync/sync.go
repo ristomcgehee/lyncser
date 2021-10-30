@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,13 +11,19 @@ import (
 	"github.com/chrismcgehee/lyncser/utils"
 )
 
+type Syncer struct {
+	RemoteFileStore utils.FileStore
+	LocalFileStore  utils.FileStore
+	stateData *StateData
+}
+
 // PerformSync does the entire sync from end to end.
-func PerformSync(fileStore utils.FileStore) {
+func (s *Syncer) PerformSync() {
 	globalConfig := getGlobalConfig()
 	localConfig := getLocalConfig()
-	stateData := getStateData()
+	s.stateData = getStateData()
 
-	fileStore.Initialize()
+	s.RemoteFileStore.Initialize()
 
 	for tag, paths := range globalConfig.TagPaths {
 		if !inSlice(tag, localConfig.Tags) {
@@ -36,15 +41,15 @@ func PerformSync(fileStore utils.FileStore) {
 					return nil
 				}
 				path = strings.Replace(path, realpath, pathToSync, 1)
-				handleFile(path, &stateData, fileStore)
+				s.handleFile(path)
 				return nil
 			})
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
-	handleFile(globalConfigPath, &stateData, fileStore)
+	s.handleFile(globalConfigPath)
 
-	saveStateData(stateData)
+	saveStateData(s.stateData)
 }
 
 // inSlice returns true if item is present in slice.
@@ -58,55 +63,46 @@ func inSlice(item string, slice []string) bool {
 }
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
-func handleFile(fileName string, stateData *StateData, fileStore utils.FileStore) {
+func (s *Syncer) handleFile(fileName string) {
 	fmt.Println("Syncing", fileName)
 	file := utils.SyncedFile{
 		FriendlyPath: fileName,
 		RealPath:     utils.RealPath(fileName),
 	}
-	fileStats, err := os.Stat(file.RealPath)
-	fileExistsLocally := true
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			fileExistsLocally = false
-		} else {
-			utils.PanicError(err)
-		}
-	}
-	if _, ok := stateData.FileStateData[fileName]; !ok {
+	fileExistsLocally := s.LocalFileStore.FileExists(file)
+	if _, ok := s.stateData.FileStateData[fileName]; !ok {
 		neverUpdated, _ := time.Parse(utils.TimeFormat, "2000-01-01T01:01:01.000Z")
-		stateData.FileStateData[fileName] = &FileStateData{
+		s.stateData.FileStateData[fileName] = &FileStateData{
 			LastCloudUpdate: neverUpdated,
 		}
 	}
-	if fileStore.FileExistsCloud(file) {
-		syncExistingFile(file, fileExistsLocally, fileStats, stateData, fileStore)
-		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
+	if s.RemoteFileStore.FileExists(file) {
+		s.syncExistingFile(file, fileExistsLocally)
+		s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	} else {
 		if !fileExistsLocally {
 			return
 		}
-		fileStore.CreateFile(file)
+		s.RemoteFileStore.CreateFile(file)
 		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
-		stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
+		s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	}
 }
 
 // syncExistingFile uploads/downloads the file as necessary
-func syncExistingFile(file utils.SyncedFile, fileExistsLocally bool, fileStats fs.FileInfo, stateData *StateData,
-	fileStore utils.FileStore) {
-	modTimeCloud := fileStore.GetCloudModifiedTime(file)
+func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool) {
+	modTimeCloud := s.RemoteFileStore.GetModifiedTime(file)
 	var modTimeLocal time.Time
 	if fileExistsLocally {
-		modTimeLocal = fileStats.ModTime().UTC()
+		modTimeLocal = s.LocalFileStore.GetModifiedTime(file).UTC()
 	}
-	lastCloudUpdate := stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
+	lastCloudUpdate := s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
 
 	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) && lastCloudUpdate.Year() > 2001 {
-		fileStore.UpdateFile(file)
+		s.RemoteFileStore.UpdateFile(file)
 		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
 	} else if !fileExistsLocally || modTimeCloud.After(lastCloudUpdate) {
-		fileStore.DownloadFile(file)
+		s.RemoteFileStore.DownloadFile(file)
 		fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
 	}
 }
