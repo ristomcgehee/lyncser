@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"google.golang.org/api/drive/v3"
+
+	"github.com/chrismcgehee/lyncser/utils"
 )
 
 // File store that uses Google Drive.
@@ -23,7 +25,7 @@ type DriveFileStore struct {
 	lyncserRootId string
 }
 
-func (d *DriveFileStore) initialize() {
+func (d *DriveFileStore) Initialize() {
 	// This is the name of the top-level folder where all files created by lyncser will be stored.
 	const lyncserRootName = "Lyncser-Root"
 	d.service = getService(false)
@@ -73,20 +75,6 @@ func (d *DriveFileStore) initialize() {
 	}
 }
 
-// Attempts an API call, and if it fails due to invalid token, will obtain a new one and try the API call again.
-func makeApiCall[T any](f func() (T, error), d *DriveFileStore) T {
-	retval, err := f()
-	if err != nil {
-		if isTokenInvalid(err) {
-			fmt.Println("Token is no longer valid. Requesting new one..")
-			d.service = getService(true)
-		}
-		retval, err = f()
-		panicError(err)
-	}
-	return retval
-}
-
 // Creates this directory and any parent directories if they do not exist.
 // Returns the Google Drive file id for the directory.
 func (d *DriveFileStore) createDirIfNecessary(dirName string) string {
@@ -110,54 +98,68 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) string {
 	return dirId
 }
 
-func (d *DriveFileStore) createFile(file SyncedFile) {
-	baseName := filepath.Base(file.friendlyPath)
-	f, err := os.Open(file.realPath)
-	panicError(err)
+func (d *DriveFileStore) CreateFile(file utils.SyncedFile) {
+	baseName := filepath.Base(file.FriendlyPath)
+	f, err := os.Open(file.RealPath)
+	utils.PanicError(err)
 	defer f.Close()
 
-	dirId := d.createDirIfNecessary(filepath.Dir(file.friendlyPath))
+	dirId := d.createDirIfNecessary(filepath.Dir(file.FriendlyPath))
 	makeApiCall(func() (*drive.File, error) {
 		return createFile(d.service, baseName, "text/plain", f, dirId)
 	}, d)
 }
 
-func (d *DriveFileStore) getCloudModifiedTime(file SyncedFile) time.Time {
-	fileId := d.mapPathToFileId[file.friendlyPath]
+func (d *DriveFileStore) GetModifiedTime(file utils.SyncedFile) time.Time {
+	fileId := d.mapPathToFileId[file.FriendlyPath]
 	driveFile := d.mapIdToFile[fileId]
-	modTimeCloud, err := time.Parse(timeFormat, driveFile.ModifiedTime)
-	panicError(err)
+	modTimeCloud, err := time.Parse(utils.TimeFormat, driveFile.ModifiedTime)
+	utils.PanicError(err)
 	return modTimeCloud
 }
 
-func (d *DriveFileStore) updateFile(file SyncedFile) {
-	fileId := d.mapPathToFileId[file.friendlyPath]
+func (d *DriveFileStore) UpdateFile(file utils.SyncedFile) {
+	fileId := d.mapPathToFileId[file.FriendlyPath]
 	driveFile := d.mapIdToFile[fileId]
-	f, err := os.Open(file.realPath)
-	panicError(err)
+	f, err := os.Open(file.RealPath)
+	utils.PanicError(err)
 	makeApiCall(func() (*drive.File, error) {
 		return updateFileContents(d.service, driveFile, fileId, f)
 	}, d)
 }
 
-func (d *DriveFileStore) downloadFile(file SyncedFile) {
-	fileId := d.mapPathToFileId[file.friendlyPath]
+func (d *DriveFileStore) DownloadFile(file utils.SyncedFile) {
+	fileId := d.mapPathToFileId[file.FriendlyPath]
 	contentsReader := makeApiCall(func() (io.ReadCloser, error) {
 		return downloadFileContents(d.service, fileId)
 	}, d)
 	defer contentsReader.Close()
-	dirName := filepath.Dir(file.realPath)
-	if !pathExists(dirName) {
+	dirName := filepath.Dir(file.RealPath)
+	if !utils.PathExists(dirName) {
 		os.MkdirAll(dirName, 0766)
 	}
-	out, err := os.OpenFile(file.realPath, os.O_WRONLY|os.O_CREATE, 0644)
-	panicError(err)
+	out, err := os.OpenFile(file.RealPath, os.O_WRONLY|os.O_CREATE, 0644)
+	utils.PanicError(err)
 	defer out.Close()
 	_, err = io.Copy(out, contentsReader)
-	panicError(err)
+	utils.PanicError(err)
 }
 
-func (d *DriveFileStore) fileExistsCloud(path SyncedFile) bool {
-	_, ok := d.mapPathToFileId[path.friendlyPath]
+func (d *DriveFileStore) FileExists(file utils.SyncedFile) bool {
+	_, ok := d.mapPathToFileId[file.FriendlyPath]
 	return ok
+}
+
+// Attempts an API call, and if it fails due to invalid token, will obtain a new one and try the API call again.
+func makeApiCall[T any](f func() (T, error), d *DriveFileStore) T {
+	retval, err := f()
+	if err != nil {
+		if isTokenInvalid(err) {
+			fmt.Println("Token is no longer valid. Requesting new one..")
+			d.service = getService(true)
+		}
+		retval, err = f()
+		utils.PanicError(err)
+	}
+	return retval
 }

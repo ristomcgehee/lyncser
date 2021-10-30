@@ -6,6 +6,9 @@ build:
 run: build
 	./lyncser
 
+test:
+	go test -timeout 30s github.com/chrismcgehee/lyncser/sync
+
 docker-build:
 	docker build -t lyncser .
 
