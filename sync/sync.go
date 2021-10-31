@@ -82,18 +82,23 @@ func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []utils.Sto
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
 func (s *Syncer) handleFile(fileName string) {
-	fmt.Println("Syncing", fileName)
 	file := utils.SyncedFile{
 		FriendlyPath: fileName,
 		RealPath:     utils.RealPath(fileName),
 	}
 	fileExistsLocally := s.LocalFileStore.FileExists(file)
 	if _, ok := s.stateData.FileStateData[fileName]; !ok {
-		neverUpdated, _ := time.Parse(utils.TimeFormat, "2000-01-01T01:01:01.000Z")
 		s.stateData.FileStateData[fileName] = &FileStateData{
-			LastCloudUpdate: neverUpdated,
+			LastCloudUpdate: utils.GetNeverSynced(),
 		}
 	}
+	if !fileExistsLocally && s.stateData.FileStateData[file.FriendlyPath].DeletedLocal {
+		return
+	}
+	if fileExistsLocally {
+		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = false
+	}
+	fmt.Println("Syncing", fileName)
 	if s.RemoteFileStore.FileExists(file) {
 		s.syncExistingFile(file, fileExistsLocally)
 	} else {
@@ -115,11 +120,16 @@ func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool)
 	}
 	lastCloudUpdate := s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
 
-	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && modTimeLocal.After(lastCloudUpdate) && lastCloudUpdate.Year() > 2001 {
+	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && utils.HasBeenSynced(lastCloudUpdate) && modTimeLocal.After(lastCloudUpdate) {
 		s.RemoteFileStore.UpdateFile(file)
 		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
-	} else if !fileExistsLocally || modTimeCloud.After(lastCloudUpdate) {
-		s.RemoteFileStore.DownloadFile(file)
-		fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
+	} else if !fileExistsLocally {
+		if utils.HasBeenSynced(lastCloudUpdate) {
+			// mark the file as deleted so it's not downloaded again
+			s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = true
+		} else {
+			s.RemoteFileStore.DownloadFile(file)
+			fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
+		}
 	}
 }

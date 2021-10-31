@@ -59,3 +59,17 @@ Feature: file store operations
     And the local modified time is "9:01 am"
     And the last cloud update was "9 am"
     Then the file should be updated to the cloud
+
+  Scenario: mark file deleted when it exists in the cloud but not locally
+    When the file exists in the cloud
+    And the cloud modified time is "7 am"
+    And the file does not exist locally
+    And the last cloud update was "9 am"
+    Then the file should be marked deleted locally
+
+  Scenario: mark file deleted when it exists in the cloud but not locally
+    When the file exists in the cloud
+    And the cloud modified time is "7 am"
+    And the file does not exist locally
+    And the file was marked deleted locally
+    Then nothing should happen

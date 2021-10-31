@@ -41,6 +41,8 @@ type StateData struct {
 type FileStateData struct {
 	// The last time this file has been uploaded/downloaded from the cloud.
 	LastCloudUpdate time.Time
+	// Whether this file has been deleted locally.
+	DeletedLocal bool
 }
 
 // getGlobalConfig reads and parses the global config file. If it does not exist, it will create it.

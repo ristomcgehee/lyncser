@@ -43,4 +43,3 @@ If the install script was executed, `lyncser` will run every 5 minutes and perfo
 
 ## Future Plans
 - Use something like OAuth PKCE so the program does not need to access the client secret.
-- A file can never be fully deleted
