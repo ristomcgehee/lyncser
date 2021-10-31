@@ -35,7 +35,6 @@ func (d *DriveFileStore) GetFiles() []utils.StoredFile {
 		return interface{}(fl), err
 	}, d)
 	fileList := iface.([]*drive.File)
-	storedFiles := make([]utils.StoredFile, 0, len(fileList))
 
 	// Populate d.mapIdToFile and storedFiles with the files we got from the cloud.
 	d.mapIdToFile = make(map[string]*drive.File)
@@ -45,10 +44,6 @@ func (d *DriveFileStore) GetFiles() []utils.StoredFile {
 			continue
 		}
 		d.mapIdToFile[file.Id] = file
-		storedFiles = append(storedFiles, utils.StoredFile{
-			Path: file.Name,
-			IsDir: file.MimeType == mimeTypeFolder,
-		})
 	}
 
 	if d.lyncserRootId == "" {
@@ -84,6 +79,15 @@ func (d *DriveFileStore) GetFiles() []utils.StoredFile {
 		}
 	}
 
+
+	storedFiles := make([]utils.StoredFile, 0, len(d.mapPathToFileId))
+	for path, fileId := range d.mapPathToFileId {
+		file := d.mapIdToFile[fileId]
+		storedFiles = append(storedFiles, utils.StoredFile{
+			Path: path,
+			IsDir: file.MimeType == mimeTypeFolder,
+		})
+	}
 	return storedFiles
 }
 

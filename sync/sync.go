@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -30,19 +31,12 @@ func (s *Syncer) PerformSync() {
 			continue
 		}
 		for _, pathToSync := range paths {
-			// Get all the remote files that start with pathToSync.
-			remoteFilesToHandle := make([]string, 0)
-			for _, remoteFile := range remoteFiles {
-				if remoteFile.IsDir || !strings.HasPrefix(remoteFile.Path, pathToSync) {
-					continue
-				}
-				remoteFilesToHandle = append(remoteFilesToHandle, remoteFile.Path)
-			}
+			realPath, err := filepath.EvalSymlinks(utils.RealPath(pathToSync))
+			remoteFilesToHandle := getMatchingRemoteFiles(pathToSync, realPath, remoteFiles)
 
-			// Recursively sync pathToSync. 
-			realpath, err := filepath.EvalSymlinks(utils.RealPath(pathToSync))
+			// Recursively sync pathToSync.
 			utils.PanicError(err)
-			filepath.WalkDir(realpath, func(path string, d fs.DirEntry, err error) error {
+			filepath.WalkDir(realPath, func(path string, d fs.DirEntry, err error) error {
 				var pathError *fs.PathError
 				if errors.As(err, &pathError) && pathError.Err.Error() != "no such file or directory" {
 					utils.PanicError(err)
@@ -50,10 +44,10 @@ func (s *Syncer) PerformSync() {
 				if d != nil && (d.IsDir() || !d.Type().IsRegular()) {
 					return nil
 				}
-				path = strings.Replace(path, realpath, pathToSync, 1)
+				path = strings.Replace(path, realPath, pathToSync, 1)
 				s.handleFile(path)
 				remoteFilesToHandle = utils.Remove(func(item string) bool {
-					return utils.RealPath(item) == path
+					return item == path
 				}, remoteFilesToHandle)
 				return nil
 			})
@@ -68,6 +62,22 @@ func (s *Syncer) PerformSync() {
 	s.handleFile(globalConfigPath)
 
 	saveStateData(s.stateData)
+}
+
+// Get all the remote files that start with pathToSync if it is a directory.
+func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []utils.StoredFile) []string {
+	remoteFilesToHandle := make([]string, 0)
+	stat, _ := os.Stat(realPath)
+	if stat != nil && !stat.IsDir() {
+		return remoteFilesToHandle
+	}
+	for _, remoteFile := range remoteFiles {
+		if remoteFile.IsDir || !strings.HasPrefix(remoteFile.Path, pathToSync) {
+			continue
+		}
+		remoteFilesToHandle = append(remoteFilesToHandle, remoteFile.Path)
+	}
+	return remoteFilesToHandle
 }
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
