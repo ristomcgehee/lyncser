@@ -156,7 +156,6 @@ func TestScenarios(t *testing.T) {
 	suite.AddStep(`the file should be updated to the cloud`, fileUpdatedCloud)
 	suite.AddStep(`the file should be created in the cloud`, fileCreatedCloud)
 	suite.AddStep(`the file should be downloaded from the cloud`, fileDownloadedFromCloud)
-	// other
 	suite.AddStep(`nothing should happen`, nothing)
 
 	suite.Run()

@@ -9,6 +9,9 @@ run: build
 test:
 	go test -timeout 30s github.com/chrismcgehee/lyncser/sync
 
+mocks:
+	mockgen -source=utils/file_store.go -package=sync > sync/mock_file_store.go
+
 docker-build:
 	docker build -t lyncser .
 

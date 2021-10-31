@@ -52,10 +52,10 @@ Feature: file store operations
     And the last cloud update was "9:01 am"
     Then nothing should happen
 
-  Scenario: do nothing when last cloud update is slightly after local modified time
+  Scenario: upload file when last cloud update is slightly before local modified time
     When the file exists in the cloud
     And the cloud modified time is "7 am"
     And the file exists locally
     And the local modified time is "9:01 am"
     And the last cloud update was "9 am"
-    Then nothing should happen
+    Then the file should be updated to the cloud

@@ -24,6 +24,8 @@ const (
 	credentialsFilePath = "~/.config/lyncser/credentials.json"
 	// Path where the OAuth token will be stored
 	tokenFilePath = "~/.config/lyncser/token.json"
+	// Mime type for files that are actually folders
+	mimeTypeFolder = "application/vnd.google-apps.folder"
 )
 
 // getClient retrieves a token, saves the token, then returns the generated client.
@@ -119,7 +121,7 @@ func isTokenInvalid(err error) bool {
 // getFileList gets the list of file that this app has access to.
 func getFileList(service *drive.Service) ([]*drive.File, error) {
 	listFilesCall := service.Files.List()
-	listFilesCall.Fields("files(name, id, parents, modifiedTime), nextPageToken")
+	listFilesCall.Fields("files(name, id, parents, modifiedTime, mimeType), nextPageToken")
 	listFilesCall.Q("trashed=false")
 	var files []*drive.File
 	for true {
@@ -140,7 +142,7 @@ func getFileList(service *drive.Service) ([]*drive.File, error) {
 func createDir(service *drive.Service, name, parentId string) (string, error) {
 	d := &drive.File{
 		Name:     filepath.Base(name),
-		MimeType: "application/vnd.google-apps.folder",
+		MimeType: mimeTypeFolder,
 	}
 	if parentId != "" {
 		d.Parents = []string{parentId}

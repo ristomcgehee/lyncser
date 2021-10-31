@@ -14,7 +14,7 @@ import (
 type Syncer struct {
 	RemoteFileStore utils.FileStore
 	LocalFileStore  utils.FileStore
-	stateData *StateData
+	stateData       *StateData
 }
 
 // PerformSync does the entire sync from end to end.
@@ -23,13 +23,23 @@ func (s *Syncer) PerformSync() {
 	localConfig := getLocalConfig()
 	s.stateData = getStateData()
 
-	s.RemoteFileStore.Initialize()
+	remoteFiles := s.RemoteFileStore.GetFiles()
 
 	for tag, paths := range globalConfig.TagPaths {
-		if !inSlice(tag, localConfig.Tags) {
+		if !utils.InSlice(tag, localConfig.Tags) {
 			continue
 		}
 		for _, pathToSync := range paths {
+			// Get all the remote files that start with pathToSync.
+			remoteFilesToHandle := make([]string, 0)
+			for _, remoteFile := range remoteFiles {
+				if remoteFile.IsDir || !strings.HasPrefix(remoteFile.Path, pathToSync) {
+					continue
+				}
+				remoteFilesToHandle = append(remoteFilesToHandle, remoteFile.Path)
+			}
+
+			// Recursively sync pathToSync. 
 			realpath, err := filepath.EvalSymlinks(utils.RealPath(pathToSync))
 			utils.PanicError(err)
 			filepath.WalkDir(realpath, func(path string, d fs.DirEntry, err error) error {
@@ -42,24 +52,22 @@ func (s *Syncer) PerformSync() {
 				}
 				path = strings.Replace(path, realpath, pathToSync, 1)
 				s.handleFile(path)
+				remoteFilesToHandle = utils.Remove(func(item string) bool {
+					return utils.RealPath(item) == path
+				}, remoteFilesToHandle)
 				return nil
 			})
+
+			// For any files that were not found locally, we'll download them now.
+			for _, remoteFile := range remoteFilesToHandle {
+				s.handleFile(remoteFile)
+			}
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
 	s.handleFile(globalConfigPath)
 
 	saveStateData(s.stateData)
-}
-
-// inSlice returns true if item is present in slice.
-func inSlice(item string, slice []string) bool {
-	for _, sliceItem := range slice {
-		if item == sliceItem {
-			return true
-		}
-	}
-	return false
 }
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud

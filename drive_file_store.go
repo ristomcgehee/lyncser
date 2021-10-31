@@ -25,7 +25,7 @@ type DriveFileStore struct {
 	lyncserRootId string
 }
 
-func (d *DriveFileStore) Initialize() {
+func (d *DriveFileStore) GetFiles() []utils.StoredFile {
 	// This is the name of the top-level folder where all files created by lyncser will be stored.
 	const lyncserRootName = "Lyncser-Root"
 	d.service = getService(false)
@@ -33,7 +33,9 @@ func (d *DriveFileStore) Initialize() {
 	fileList := makeApiCall(func() ([]*drive.File, error) {
 		return getFileList(d.service)
 	}, d)
-	// Populate d.mapIdToFile with the files we got from the cloud.
+	storedFiles := make([]utils.StoredFile, 0, len(fileList))
+
+	// Populate d.mapIdToFile and storedFiles with the files we got from the cloud.
 	d.mapIdToFile = make(map[string]*drive.File)
 	for _, file := range fileList {
 		if file.Name == lyncserRootName {
@@ -41,6 +43,10 @@ func (d *DriveFileStore) Initialize() {
 			continue
 		}
 		d.mapIdToFile[file.Id] = file
+		storedFiles = append(storedFiles, utils.StoredFile{
+			Path: file.Name,
+			IsDir: file.MimeType == mimeTypeFolder,
+		})
 	}
 
 	if d.lyncserRootId == "" {
@@ -73,6 +79,8 @@ func (d *DriveFileStore) Initialize() {
 			d.mapPathToFileId[path] = id
 		}
 	}
+
+	return storedFiles
 }
 
 // Creates this directory and any parent directories if they do not exist.

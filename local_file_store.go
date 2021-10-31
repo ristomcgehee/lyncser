@@ -11,7 +11,8 @@ import (
 // For accessing local files.
 type LocalFileStore struct{}
 
-func (l *LocalFileStore) Initialize() {
+func (l *LocalFileStore) GetFiles() []utils.StoredFile {
+	panic("not implemented")
 }
 
 // Creates this directory and any parent directories if they do not exist.
