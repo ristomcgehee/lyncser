@@ -30,9 +30,11 @@ func (d *DriveFileStore) GetFiles() []utils.StoredFile {
 	const lyncserRootName = "Lyncser-Root"
 	d.service = getService(false)
 	d.lyncserRootId = ""
-	fileList := makeApiCall(func() ([]*drive.File, error) {
-		return getFileList(d.service)
+	iface := makeApiCall(func() (interface{}, error) {
+		fl, err := getFileList(d.service)
+		return interface{}(fl), err
 	}, d)
+	fileList := iface.([]*drive.File)
 	storedFiles := make([]utils.StoredFile, 0, len(fileList))
 
 	// Populate d.mapIdToFile and storedFiles with the files we got from the cloud.
@@ -50,9 +52,11 @@ func (d *DriveFileStore) GetFiles() []utils.StoredFile {
 	}
 
 	if d.lyncserRootId == "" {
-		d.lyncserRootId = makeApiCall(func() (string, error) {
-			return createDir(d.service, lyncserRootName, "")
+		iface = makeApiCall(func() (interface{}, error) {
+			s, err := createDir(d.service, lyncserRootName, "")
+			return interface{}(s), err
 		}, d)
+		d.lyncserRootId = iface.(string)
 	}
 
 	// Populate d.mapPathToFileId with the files that we can trace back to d.lyncserRootId
@@ -99,9 +103,11 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) string {
 		// The parent directory does not exist either. Recursively create it.
 		parentId = d.createDirIfNecessary(parent)
 	}
-	dirId = makeApiCall(func() (string, error) {
-		return createDir(d.service, dirName, parentId)
+	iface := makeApiCall(func() (interface{}, error) {
+		s, err := createDir(d.service, dirName, parentId)
+		return interface{}(s), err
 	}, d)
+	dirId = iface.(string)
 	d.mapPathToFileId[dirName] = dirId
 	return dirId
 }
@@ -113,8 +119,9 @@ func (d *DriveFileStore) CreateFile(file utils.SyncedFile) {
 	defer f.Close()
 
 	dirId := d.createDirIfNecessary(filepath.Dir(file.FriendlyPath))
-	makeApiCall(func() (*drive.File, error) {
-		return createFile(d.service, baseName, "text/plain", f, dirId)
+	makeApiCall(func() (interface{}, error) {
+		f, err := createFile(d.service, baseName, "text/plain", f, dirId)
+		return interface{}(f), err
 	}, d)
 }
 
@@ -131,16 +138,19 @@ func (d *DriveFileStore) UpdateFile(file utils.SyncedFile) {
 	driveFile := d.mapIdToFile[fileId]
 	f, err := os.Open(file.RealPath)
 	utils.PanicError(err)
-	makeApiCall(func() (*drive.File, error) {
-		return updateFileContents(d.service, driveFile, fileId, f)
+	makeApiCall(func() (interface{}, error) {
+		f, err := updateFileContents(d.service, driveFile, fileId, f)
+		return interface{}(f), err
 	}, d)
 }
 
 func (d *DriveFileStore) DownloadFile(file utils.SyncedFile) {
 	fileId := d.mapPathToFileId[file.FriendlyPath]
-	contentsReader := makeApiCall(func() (io.ReadCloser, error) {
-		return downloadFileContents(d.service, fileId)
+	iface := makeApiCall(func() (interface{}, error) {
+		r, err := downloadFileContents(d.service, fileId)
+		return interface{}(r), err
 	}, d)
+	contentsReader := iface.(io.ReadCloser)
 	defer contentsReader.Close()
 	dirName := filepath.Dir(file.RealPath)
 	if !utils.PathExists(dirName) {
@@ -159,7 +169,7 @@ func (d *DriveFileStore) FileExists(file utils.SyncedFile) bool {
 }
 
 // Attempts an API call, and if it fails due to invalid token, will obtain a new one and try the API call again.
-func makeApiCall[T any](f func() (T, error), d *DriveFileStore) T {
+func makeApiCall(f func() (interface{}, error), d *DriveFileStore) interface{} {
 	retval, err := f()
 	if err != nil {
 		if isTokenInvalid(err) {
@@ -171,3 +181,18 @@ func makeApiCall[T any](f func() (T, error), d *DriveFileStore) T {
 	}
 	return retval
 }
+
+// To be re-introduced in Go 1.18.
+// // Attempts an API call, and if it fails due to invalid token, will obtain a new one and try the API call again.
+// func makeApiCall[T any](f func() (T, error), d *DriveFileStore) T {
+// 	retval, err := f()
+// 	if err != nil {
+// 		if isTokenInvalid(err) {
+// 			fmt.Println("Token is no longer valid. Requesting new one..")
+// 			d.service = getService(true)
+// 		}
+// 		retval, err = f()
+// 		utils.PanicError(err)
+// 	}
+// 	return retval
+// }
