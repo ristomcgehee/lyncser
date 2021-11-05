@@ -32,13 +32,14 @@ func (s *Syncer) PerformSync() {
 		}
 		for _, pathToSync := range paths {
 			realPath, err := filepath.EvalSymlinks(utils.RealPath(pathToSync))
+			if !errors.Is(err, fs.ErrNotExist) {
+				utils.PanicError(err)
+			}
 			remoteFilesToHandle := getMatchingRemoteFiles(pathToSync, realPath, remoteFiles)
 
 			// Recursively sync pathToSync.
-			utils.PanicError(err)
 			filepath.WalkDir(realPath, func(path string, d fs.DirEntry, err error) error {
-				var pathError *fs.PathError
-				if errors.As(err, &pathError) && pathError.Err.Error() != "no such file or directory" {
+				if !errors.Is(err, fs.ErrNotExist) {
 					utils.PanicError(err)
 				}
 				if d != nil && (d.IsDir() || !d.Type().IsRegular()) {

@@ -41,7 +41,7 @@ func PathExists(path string) bool {
 // operation if there are many items in slice.
 func Remove(f func(item string) bool, slice []string) []string {
 	for i, item := range slice {
-		if f(item ) {
+		if f(item) {
 			return append(slice[:i], slice[i+1:]...)
 		}
 	}
