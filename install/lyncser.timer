@@ -2,10 +2,10 @@
 Description=Lyncser file syncing application
 
 [Timer]
-#Run 120 seconds after boot for the first time
-OnBootSec=120
+#Run 2 minutes after boot for the first time
+OnBootSec=2min
 #Run every 5 minutes thereafter
-OnActiveSec=300
+OnUnitActiveSec=5min
 Unit=lyncser.service
 
 [Install]
