@@ -121,16 +121,20 @@ func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool)
 	}
 	lastCloudUpdate := s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
 
-	if fileExistsLocally && modTimeLocal.After(modTimeCloud) && utils.HasBeenSynced(lastCloudUpdate) && modTimeLocal.After(lastCloudUpdate) {
+	uploadFile := fileExistsLocally && modTimeLocal.After(modTimeCloud) &&
+		utils.HasBeenSynced(lastCloudUpdate) && modTimeLocal.After(lastCloudUpdate)
+	downloadFile := (!fileExistsLocally && !utils.HasBeenSynced(lastCloudUpdate)) ||
+		(fileExistsLocally && modTimeCloud.After(modTimeLocal) && lastCloudUpdate.Before(modTimeCloud))
+	markDeleted := !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
+
+	if uploadFile {
 		s.RemoteFileStore.UpdateFile(file)
 		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
-	} else if !fileExistsLocally {
-		if utils.HasBeenSynced(lastCloudUpdate) {
-			// mark the file as deleted so it's not downloaded again
-			s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = true
-		} else {
-			s.RemoteFileStore.DownloadFile(file)
-			fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
-		}
+	} else if downloadFile {
+		s.RemoteFileStore.DownloadFile(file)
+		fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
+	} else if markDeleted {
+		// mark the file as deleted so it's not downloaded again
+		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = true
 	}
 }

@@ -1,4 +1,4 @@
-Feature: file store operations
+Feature: Syncing files at appropriate times
 
   Scenario: uploading file when modified locally
     When the file exists in the cloud
@@ -25,6 +25,22 @@ Feature: file store operations
     When the file exists in the cloud
     And the file does not exist locally
     And the cloud modified time is "7 am"
+    And the last cloud update was "never"
+    Then the file should be downloaded from the cloud
+
+  Scenario: downloading existing file from cloud
+    When the file exists in the cloud
+    And the file exists locally
+    And the cloud modified time is "9 am"
+    And the local modified time is "8 am"
+    And the last cloud update was "8 am"
+    Then the file should be downloaded from the cloud
+
+  Scenario: downloading existing file from cloud when it hasn't been synced before
+    When the file exists in the cloud
+    And the file exists locally
+    And the cloud modified time is "9 am"
+    And the local modified time is "8 am"
     And the last cloud update was "never"
     Then the file should be downloaded from the cloud
 
