@@ -160,7 +160,7 @@ func (d *DriveFileStore) DownloadFile(file utils.SyncedFile) {
 	if !utils.PathExists(dirName) {
 		os.MkdirAll(dirName, 0766)
 	}
-	out, err := os.OpenFile(file.RealPath, os.O_WRONLY|os.O_CREATE, 0644)
+	out, err := os.OpenFile(file.RealPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	utils.PanicError(err)
 	defer out.Close()
 	_, err = io.Copy(out, contentsReader)
