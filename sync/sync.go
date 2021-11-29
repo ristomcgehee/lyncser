@@ -64,7 +64,7 @@ func (s *Syncer) PerformSync() error {
 				path = strings.Replace(path, realPath, pathToSync, 1)
 				err = s.handleFile(path)
 				if err != nil {
-					return err
+					fmt.Printf("Error syncing file '%s': %v\n", path, err)
 				}
 				remoteFilesToHandle = utils.Remove(func(item string) bool {
 					return item == path
@@ -72,14 +72,14 @@ func (s *Syncer) PerformSync() error {
 				return nil
 			})
 			if err != nil {
-				return err
+				fmt.Printf("Error walking dir '%s': %v\n", pathToSync, err)
 			}
 
 			// For any files that were not found locally, we'll download them now.
 			for _, remoteFile := range remoteFilesToHandle {
 				err = s.handleFile(remoteFile)
 				if err != nil {
-					return err
+					fmt.Printf("Error syncing remote file '%s': %v\n", remoteFile, err)
 				}
 			}
 		}
@@ -87,7 +87,7 @@ func (s *Syncer) PerformSync() error {
 	// globalConfigPath gets uploaded even if it's not explicitly listed
 	err = s.handleFile(globalConfigPath)
 	if err != nil {
-		return err
+		fmt.Printf("Error syncing file '%s': %v\n", globalConfigPath, err)
 	}
 
 	err = saveStateData(s.stateData)
