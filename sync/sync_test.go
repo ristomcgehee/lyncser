@@ -11,13 +11,19 @@ import (
 	"github.com/chrismcgehee/lyncser/utils"
 )
 
-// Getst the context used by most steps.
+func panicError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Gets the context used by most steps.
 func unwrapContext(ctx gobdd.Context) (*Syncer, utils.SyncedFile) {
 	syncerIf, err := ctx.Get("syncer")
-	utils.PanicError(err)
+	panicError(err)
 	syncer := syncerIf.(*Syncer)
 	syncedFileIf, err := ctx.Get("syncedFile")
-	utils.PanicError(err)
+	panicError(err)
 	syncedFile := syncedFileIf.(utils.SyncedFile)
 	return syncer, syncedFile
 }
@@ -39,12 +45,12 @@ func convertTime(timeStr string) time.Time {
 		panic(fmt.Sprintf("unrecognized time: %s", timeToUse))
 	}
 	retTime, err := time.Parse(utils.TimeFormat, timeToUse)
-	utils.PanicError(err)
+	panicError(err)
 	return retTime
 }
 
 // List of functions that will be called after the scenario has finished.
-type assertExpectationFunc func (t gobdd.StepTest, ctx gobdd.Context)
+type assertExpectationFunc func(t gobdd.StepTest, ctx gobdd.Context)
 
 // Local file info =================================================================================
 
@@ -53,7 +59,7 @@ func fileExistsLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile)).
-		Return(true).AnyTimes()
+		Return(true, nil).AnyTimes()
 }
 
 func fileDoesntExistLocally(t gobdd.StepTest, ctx gobdd.Context) {
@@ -61,7 +67,7 @@ func fileDoesntExistLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile)).
-		Return(false).AnyTimes()
+		Return(false, nil).AnyTimes()
 }
 
 func localModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
@@ -69,7 +75,7 @@ func localModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
 		GetModifiedTime(gomock.Eq(syncedFile)).
-		Return(convertTime(modifiedTime)).AnyTimes()
+		Return(convertTime(modifiedTime), nil).AnyTimes()
 }
 
 func lastCloudUpdate(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
@@ -89,7 +95,7 @@ func fileExistsInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile)).
-		Return(true).AnyTimes()
+		Return(true, nil).AnyTimes()
 }
 
 func fileDoesntExistInCloud(t gobdd.StepTest, ctx gobdd.Context) {
@@ -97,7 +103,7 @@ func fileDoesntExistInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile)).
-		Return(false).AnyTimes()
+		Return(false, nil).AnyTimes()
 }
 
 func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
@@ -105,7 +111,7 @@ func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
 		GetModifiedTime(gomock.Eq(syncedFile)).
-		Return(convertTime(modifiedTime)).AnyTimes()
+		Return(convertTime(modifiedTime), nil).AnyTimes()
 }
 
 // Actions =========================================================================================
@@ -133,7 +139,7 @@ func fileDownloadedFromCloud(t gobdd.StepTest, ctx gobdd.Context) {
 
 func shouldBeDeletedLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	iface, err := ctx.Get("expectations")
-	utils.PanicError(err)
+	panicError(err)
 	expectations := iface.([]assertExpectationFunc)
 	expectations = append(expectations, func(t gobdd.StepTest, ctx gobdd.Context) {
 		syncer, syncedFile := unwrapContext(ctx)

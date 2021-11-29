@@ -4,12 +4,12 @@ import "time"
 
 type FileStore interface {
 	// GetFiles returns the list of file that are stored in this file store.
-	GetFiles() []StoredFile
-	CreateFile(path SyncedFile)
-	UpdateFile(path SyncedFile)
-	DownloadFile(path SyncedFile)
-	GetModifiedTime(path SyncedFile) time.Time
-	FileExists(path SyncedFile) bool
+	GetFiles() ([]StoredFile, error)
+	CreateFile(path SyncedFile) error
+	UpdateFile(path SyncedFile) error
+	DownloadFile(path SyncedFile) error
+	GetModifiedTime(path SyncedFile) (time.Time, error)
+	FileExists(path SyncedFile) (bool, error)
 }
 
 type StoredFile struct {

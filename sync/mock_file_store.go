@@ -36,9 +36,11 @@ func (m *MockFileStore) EXPECT() *MockFileStoreMockRecorder {
 }
 
 // CreateFile mocks base method.
-func (m *MockFileStore) CreateFile(path utils.SyncedFile) {
+func (m *MockFileStore) CreateFile(path utils.SyncedFile) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "CreateFile", path)
+	ret := m.ctrl.Call(m, "CreateFile", path)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // CreateFile indicates an expected call of CreateFile.
@@ -48,9 +50,11 @@ func (mr *MockFileStoreMockRecorder) CreateFile(path interface{}) *gomock.Call {
 }
 
 // DownloadFile mocks base method.
-func (m *MockFileStore) DownloadFile(path utils.SyncedFile) {
+func (m *MockFileStore) DownloadFile(path utils.SyncedFile) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "DownloadFile", path)
+	ret := m.ctrl.Call(m, "DownloadFile", path)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // DownloadFile indicates an expected call of DownloadFile.
@@ -60,11 +64,12 @@ func (mr *MockFileStoreMockRecorder) DownloadFile(path interface{}) *gomock.Call
 }
 
 // FileExists mocks base method.
-func (m *MockFileStore) FileExists(path utils.SyncedFile) bool {
+func (m *MockFileStore) FileExists(path utils.SyncedFile) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FileExists", path)
 	ret0, _ := ret[0].(bool)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // FileExists indicates an expected call of FileExists.
@@ -74,11 +79,12 @@ func (mr *MockFileStoreMockRecorder) FileExists(path interface{}) *gomock.Call {
 }
 
 // GetFiles mocks base method.
-func (m *MockFileStore) GetFiles() []utils.StoredFile {
+func (m *MockFileStore) GetFiles() ([]utils.StoredFile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFiles")
 	ret0, _ := ret[0].([]utils.StoredFile)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetFiles indicates an expected call of GetFiles.
@@ -88,11 +94,12 @@ func (mr *MockFileStoreMockRecorder) GetFiles() *gomock.Call {
 }
 
 // GetModifiedTime mocks base method.
-func (m *MockFileStore) GetModifiedTime(path utils.SyncedFile) time.Time {
+func (m *MockFileStore) GetModifiedTime(path utils.SyncedFile) (time.Time, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetModifiedTime", path)
 	ret0, _ := ret[0].(time.Time)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetModifiedTime indicates an expected call of GetModifiedTime.
@@ -102,9 +109,11 @@ func (mr *MockFileStoreMockRecorder) GetModifiedTime(path interface{}) *gomock.C
 }
 
 // UpdateFile mocks base method.
-func (m *MockFileStore) UpdateFile(path utils.SyncedFile) {
+func (m *MockFileStore) UpdateFile(path utils.SyncedFile) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateFile", path)
+	ret := m.ctrl.Call(m, "UpdateFile", path)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // UpdateFile indicates an expected call of UpdateFile.

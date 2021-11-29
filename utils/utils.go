@@ -14,27 +14,24 @@ const (
 	neverSyncedStr = "2000-01-01T01:01:01.000Z"
 )
 
-func RealPath(path string) string {
+func RealPath(path string) (string, error) {
 	escapedPath := strings.ReplaceAll(path, "'", "\\'")
 	out, err := shell.Fields(escapedPath, nil)
-	PanicError(err)
-	return out[0]
-}
-
-// Panics if the error is not nil.
-func PanicError(err error) {
 	if err != nil {
-		panic(err)
+		return "", err
 	}
+	return out[0], nil
 }
 
-func PathExists(path string) bool {
+func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		return false
+		return false, nil
 	}
-	PanicError(err)
-	return true
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // Remove returns a slice with the first item that satisfies f removed. Order is retained. This can be an expensive

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,39 +28,46 @@ const (
 )
 
 // getClient retrieves a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config, forceNewToken bool) *http.Client {
+func getClient(config *oauth2.Config, forceNewToken bool) (*http.Client, error) {
 	// The file token.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
-	tokFile := utils.RealPath(tokenFilePath)
+	tokFile, err := utils.RealPath(tokenFilePath)
+	if err != nil {
+		return nil, err
+	}
 	var tok *oauth2.Token
-	var err error
 	if !forceNewToken {
 		tok, err = tokenFromFile(tokFile)
 	}
 	if err != nil || forceNewToken {
-		tok = getTokenFromWeb(config)
+		tok, err = getTokenFromWeb(config)
+		if err != nil {
+			return nil, err
+		}
 		saveToken(tokFile, tok)
 	}
-	return config.Client(context.Background(), tok)
+	return config.Client(context.Background(), tok), nil
 }
 
 // getTokenFromWeb requests a token from the web, then returns the retrieved token.
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
+func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
 		"authorization code: \n%v\n", authURL)
 
 	var authCode string
 	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code: %v", err)
+		return nil, err
+		// log.Fatalf("Unable to read authorization code: %v", err)
 	}
 
 	tok, err := config.Exchange(context.TODO(), authCode)
 	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
+		return nil, err
+		// log.Fatalf("Unable to retrieve token from web: %v", err)
 	}
-	return tok
+	return tok, nil
 }
 
 // tokenFromFile retrieves a token from a local file.
@@ -77,33 +83,48 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 }
 
 // saveToken saves a token to a file path.
-func saveToken(path string, token *oauth2.Token) {
+func saveToken(path string, token *oauth2.Token) error {
 	fmt.Printf("Saving credential file to: %s\n", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		return err
+		// log.Fatalf("Unable to cache oauth token: %v", err)
 	}
 	defer f.Close()
-	json.NewEncoder(f).Encode(token)
+	err = json.NewEncoder(f).Encode(token)
+	return err
 }
 
 // getService returns a service that can be used to make API calls
-func getService(forceNewToken bool) *drive.Service {
-	b, err := ioutil.ReadFile(utils.RealPath(credentialsFilePath))
-	utils.PanicError(err)
+func getService(forceNewToken bool) (*drive.Service, error) {
+	realPath, err := utils.RealPath(credentialsFilePath)
+	if err != nil {
+		return nil, err
+	}
+	b, err := ioutil.ReadFile(realPath)
+	if err != nil {
+		return nil, err
+	}
 
 	// If modifying these scopes, delete the previously saved token.json.
 	clientConfig, err := google.ConfigFromJSON(b, drive.DriveFileScope)
-	utils.PanicError(err)
-	client := getClient(clientConfig, forceNewToken)
+	if err != nil {
+		return nil, err
+	}
+	client, err := getClient(clientConfig, forceNewToken)
+	if err != nil {
+		return nil, err
+	}
 
 	service, err := drive.New(client)
-	utils.PanicError(err)
-	return service
+	if err != nil {
+		return nil, err
+	}
+	return service, nil
 }
 
 // isTokenInvalid returns true if the error is for an invalid token.
-func isTokenInvalid(err error) bool {
+func isTokenInvalid(err error) (bool, error) {
 	var oauthError *oauth2.RetrieveError
 	if errors.As(err, &oauthError) {
 		r := struct {
@@ -111,11 +132,11 @@ func isTokenInvalid(err error) bool {
 			ErrorDescription string `json:"error_description"`
 		}{}
 		if err := json.Unmarshal(oauthError.Body, &r); err != io.EOF {
-			utils.PanicError(err)
+			return false, err
 		}
-		return r.Error == "invalid_grant"
+		return r.Error == "invalid_grant", nil
 	}
-	return false
+	return false, nil
 }
 
 // getFileList gets the list of file that this app has access to.

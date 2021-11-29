@@ -19,50 +19,79 @@ type Syncer struct {
 }
 
 // PerformSync does the entire sync from end to end.
-func (s *Syncer) PerformSync() {
-	globalConfig := getGlobalConfig()
-	localConfig := getLocalConfig()
-	s.stateData = getStateData()
+func (s *Syncer) PerformSync() error {
+	globalConfig, err := getGlobalConfig()
+	if err != nil {
+		return err
+	}
+	localConfig, err := getLocalConfig()
+	if err != nil {
+		return err
+	}
+	s.stateData, err = getStateData()
+	if err != nil {
+		return err
+	}
 
-	remoteFiles := s.RemoteFileStore.GetFiles()
+	remoteFiles, err := s.RemoteFileStore.GetFiles()
+	if err != nil {
+		return err
+	}
 
 	for tag, paths := range globalConfig.TagPaths {
 		if !utils.InSlice(tag, localConfig.Tags) {
 			continue
 		}
 		for _, pathToSync := range paths {
-			realPath, err := filepath.EvalSymlinks(utils.RealPath(pathToSync))
-			if !errors.Is(err, fs.ErrNotExist) {
-				utils.PanicError(err)
+			realPath, err := utils.RealPath(pathToSync)
+			if err != nil {
+				return err
+			}
+			realPath, err = filepath.EvalSymlinks(realPath)
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
 			}
 			remoteFilesToHandle := getMatchingRemoteFiles(pathToSync, realPath, remoteFiles)
 
 			// Recursively sync pathToSync.
-			filepath.WalkDir(realPath, func(path string, d fs.DirEntry, err error) error {
-				if !errors.Is(err, fs.ErrNotExist) {
-					utils.PanicError(err)
+			err = filepath.WalkDir(realPath, func(path string, d fs.DirEntry, err error) error {
+				if err != nil && !errors.Is(err, fs.ErrNotExist) {
+					return err
 				}
 				if d != nil && (d.IsDir() || !d.Type().IsRegular()) {
 					return nil
 				}
 				path = strings.Replace(path, realPath, pathToSync, 1)
-				s.handleFile(path)
+				err = s.handleFile(path)
+				if err != nil {
+					return err
+				}
 				remoteFilesToHandle = utils.Remove(func(item string) bool {
 					return item == path
 				}, remoteFilesToHandle)
 				return nil
 			})
+			if err != nil {
+				return err
+			}
 
 			// For any files that were not found locally, we'll download them now.
 			for _, remoteFile := range remoteFilesToHandle {
-				s.handleFile(remoteFile)
+				err = s.handleFile(remoteFile)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
-	s.handleFile(globalConfigPath)
+	err = s.handleFile(globalConfigPath)
+	if err != nil {
+		return err
+	}
 
-	saveStateData(s.stateData)
+	err = saveStateData(s.stateData)
+	return err
 }
 
 // Get all the remote files that start with pathToSync if it is a directory.
@@ -82,42 +111,69 @@ func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []utils.Sto
 }
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
-func (s *Syncer) handleFile(fileName string) {
+func (s *Syncer) handleFile(fileName string) error {
+	realPath, err := utils.RealPath(fileName)
+	if err != nil {
+		return err
+	}
 	file := utils.SyncedFile{
 		FriendlyPath: fileName,
-		RealPath:     utils.RealPath(fileName),
+		RealPath:     realPath,
 	}
-	fileExistsLocally := s.LocalFileStore.FileExists(file)
+	fileExistsLocally, err := s.LocalFileStore.FileExists(file)
+	if err != nil {
+		return err
+	}
 	if _, ok := s.stateData.FileStateData[fileName]; !ok {
 		s.stateData.FileStateData[fileName] = &FileStateData{
 			LastCloudUpdate: utils.GetNeverSynced(),
 		}
 	}
+	// Once a file is deleted locally, it's not downloaded again.
 	if !fileExistsLocally && s.stateData.FileStateData[file.FriendlyPath].DeletedLocal {
-		return
+		return nil
 	}
 	if fileExistsLocally {
 		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = false
 	}
 	fmt.Println("Syncing", fileName)
-	if s.RemoteFileStore.FileExists(file) {
-		s.syncExistingFile(file, fileExistsLocally)
+	fileExistsRemotely, err := s.RemoteFileStore.FileExists(file)
+	if err != nil {
+		return err
+	}
+	if fileExistsRemotely {
+		err = s.syncExistingFile(file, fileExistsLocally)
+		if err != nil {
+			return err
+		}
 	} else {
 		if !fileExistsLocally {
-			return
+			// The file doesn't exist locally or in the cloud. ¯\_(ツ)_/¯
+			return nil
 		}
-		s.RemoteFileStore.CreateFile(file)
+		err = s.RemoteFileStore.CreateFile(file)
+		if err != nil {
+			return err
+		}
 		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
 	}
 	s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
+	return nil
 }
 
 // syncExistingFile uploads/downloads the file as necessary
-func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool) {
-	modTimeCloud := s.RemoteFileStore.GetModifiedTime(file)
+func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool) error {
+	modTimeCloud, err := s.RemoteFileStore.GetModifiedTime(file)
+	if err != nil {
+		return err
+	}
 	var modTimeLocal time.Time
 	if fileExistsLocally {
-		modTimeLocal = s.LocalFileStore.GetModifiedTime(file).UTC()
+		modTimeLocal, err = s.LocalFileStore.GetModifiedTime(file)
+		if err != nil {
+			return err
+		}
+		modTimeLocal = modTimeLocal.UTC()
 	}
 	lastCloudUpdate := s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
 
@@ -128,13 +184,20 @@ func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool)
 	markDeleted := !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
 
 	if uploadFile {
-		s.RemoteFileStore.UpdateFile(file)
+		err = s.RemoteFileStore.UpdateFile(file)
+		if err != nil {
+			return err
+		}
 		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
 	} else if downloadFile {
-		s.RemoteFileStore.DownloadFile(file)
+		err = s.RemoteFileStore.DownloadFile(file)
+		if err != nil {
+			return err
+		}
 		fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
 	} else if markDeleted {
 		// mark the file as deleted so it's not downloaded again
 		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = true
 	}
+	return nil
 }

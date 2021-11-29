@@ -11,43 +11,39 @@ import (
 // For accessing local files.
 type LocalFileStore struct{}
 
-func (l *LocalFileStore) GetFiles() []utils.StoredFile {
+func (l *LocalFileStore) GetFiles() ([]utils.StoredFile, error) {
 	panic("not implemented")
 }
 
-// Creates this directory and any parent directories if they do not exist.
-// Returns the Google Drive file id for the directory.
-func (l *LocalFileStore) createDirIfNecessary(dirName string) string {
+func (l *LocalFileStore) CreateFile(file utils.SyncedFile) error {
 	panic("not implemented")
 }
 
-func (l *LocalFileStore) CreateFile(file utils.SyncedFile) {
-	panic("not implemented")
-}
-
-func (l *LocalFileStore) GetModifiedTime(file utils.SyncedFile) time.Time {
+func (l *LocalFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, error) {
 	fileStats, err := os.Stat(file.RealPath)
-	utils.PanicError(err)
-	return fileStats.ModTime()
+	if err != nil {
+		return time.Now(), err
+	}
+	return fileStats.ModTime(), nil
 }
 
-func (l *LocalFileStore) UpdateFile(file utils.SyncedFile) {
+func (l *LocalFileStore) UpdateFile(file utils.SyncedFile) error {
 	panic("not implemented")
 }
 
-func (l *LocalFileStore) DownloadFile(file utils.SyncedFile) {
+func (l *LocalFileStore) DownloadFile(file utils.SyncedFile) error {
 	panic("not implemented")
 }
 
-func (l *LocalFileStore) FileExists(file utils.SyncedFile) bool {
+func (l *LocalFileStore) FileExists(file utils.SyncedFile) (bool, error) {
 	fileExistsLocally := true
 	_, err := os.Stat(file.RealPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			fileExistsLocally = false
 		} else {
-			utils.PanicError(err)
+			return false, err
 		}
 	}
-	return fileExistsLocally
+	return fileExistsLocally, nil
 }

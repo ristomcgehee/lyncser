@@ -46,64 +46,91 @@ type FileStateData struct {
 }
 
 // getGlobalConfig reads and parses the global config file. If it does not exist, it will create it.
-func getGlobalConfig() GlobalConfig {
-	fullConfigPath := utils.RealPath(globalConfigPath)
+func getGlobalConfig() (*GlobalConfig, error) {
+	fullConfigPath, err := utils.RealPath(globalConfigPath)
+	if err != nil {
+		return nil, err
+	}
 	data, err := ioutil.ReadFile(fullConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
 		configDir := path.Dir(fullConfigPath)
 		os.MkdirAll(configDir, 0700)
 		data = []byte("files:\n  all:\n    # - ~/.bashrc\n")
 		err = os.WriteFile(fullConfigPath, data, 0644)
-		utils.PanicError(err)
-	} else {
-		utils.PanicError(err)
+	}
+	if err != nil {
+		return nil, err
 	}
 	var config GlobalConfig
 	err = yaml.Unmarshal(data, &config)
-	utils.PanicError(err)
-	return config
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
 
 // getLocalConfig reads and parses the local config file. If it does not exist, it will create it.
-func getLocalConfig() LocalConfig {
-	fullConfigPath := utils.RealPath(localConfigPath)
+func getLocalConfig() (*LocalConfig, error) {
+	fullConfigPath, err := utils.RealPath(localConfigPath)
+	if err != nil {
+		return nil, err
+	}
 	data, err := ioutil.ReadFile(fullConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
 		configDir := path.Dir(fullConfigPath)
 		os.MkdirAll(configDir, 0700)
 		data = []byte("tags:\n  - all\n")
 		err = os.WriteFile(fullConfigPath, data, 0644)
-		utils.PanicError(err)
-	} else {
-		utils.PanicError(err)
+	}
+	if err != nil {
+		return nil, err
 	}
 	var config LocalConfig
 	err = yaml.Unmarshal(data, &config)
-	utils.PanicError(err)
-	return config
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
 
 // getStateData reads and parses the state data file. If that file does not exist yet, this method will return
 // a newly initialized struct.
-func getStateData() *StateData {
+func getStateData() (*StateData, error) {
 	var stateData StateData
-	data, err := ioutil.ReadFile(utils.RealPath(stateFilePath))
+	realpath, err := utils.RealPath(stateFilePath)
+	if err != nil {
+		return nil, err
+	}
+	data, err := ioutil.ReadFile(realpath)
+	if err != nil {
+		return nil, err
+	}
 	if errors.Is(err, os.ErrNotExist) {
 		stateData = StateData{
 			FileStateData: map[string]*FileStateData{},
 		}
 	} else {
-		utils.PanicError(err)
+		if err != nil {
+			return nil, err
+		}
 		err = json.Unmarshal(data, &stateData)
-		utils.PanicError(err)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return &stateData
+	return &stateData, nil
 }
 
 // saveStateData will save the state data to disk.
-func saveStateData(stateData *StateData) {
+func saveStateData(stateData *StateData) error {
 	data, err := json.MarshalIndent(stateData, "", " ")
-	utils.PanicError(err)
-	err = ioutil.WriteFile(utils.RealPath(stateFilePath), data, 0644)
-	utils.PanicError(err)
+	if err != nil {
+		return err
+	}
+	realpath, err := utils.RealPath(stateFilePath)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(realpath, data, 0644)
+	return err
 }
