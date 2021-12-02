@@ -62,8 +62,7 @@ func (s *Syncer) PerformSync() error {
 					return nil
 				}
 				path = strings.Replace(path, realPath, pathToSync, 1)
-				err = s.handleFile(path)
-				if err != nil {
+				if err = s.handleFile(path); err != nil {
 					fmt.Printf("Error syncing file '%s': %v\n", path, err)
 				}
 				remoteFilesToHandle = utils.Remove(func(item string) bool {
@@ -77,21 +76,18 @@ func (s *Syncer) PerformSync() error {
 
 			// For any files that were not found locally, we'll download them now.
 			for _, remoteFile := range remoteFilesToHandle {
-				err = s.handleFile(remoteFile)
-				if err != nil {
+				if err = s.handleFile(remoteFile); err != nil {
 					fmt.Printf("Error syncing remote file '%s': %v\n", remoteFile, err)
 				}
 			}
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
-	err = s.handleFile(globalConfigPath)
-	if err != nil {
+	if err = s.handleFile(globalConfigPath); err != nil {
 		fmt.Printf("Error syncing file '%s': %v\n", globalConfigPath, err)
 	}
 
-	err = saveStateData(s.stateData)
-	return err
+	return saveStateData(s.stateData)
 }
 
 // Get all the remote files that start with pathToSync if it is a directory.
@@ -142,8 +138,7 @@ func (s *Syncer) handleFile(fileName string) error {
 		return err
 	}
 	if fileExistsRemotely {
-		err = s.syncExistingFile(file, fileExistsLocally)
-		if err != nil {
+		if err = s.syncExistingFile(file, fileExistsLocally); err != nil {
 			return err
 		}
 	} else {
@@ -151,8 +146,7 @@ func (s *Syncer) handleFile(fileName string) error {
 			// The file doesn't exist locally or in the cloud. ¯\_(ツ)_/¯
 			return nil
 		}
-		err = s.RemoteFileStore.CreateFile(file)
-		if err != nil {
+		if err = s.RemoteFileStore.CreateFile(file); err != nil {
 			return err
 		}
 		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
@@ -184,14 +178,12 @@ func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool)
 	markDeleted := !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
 
 	if uploadFile {
-		err = s.RemoteFileStore.UpdateFile(file)
-		if err != nil {
+		if err = s.RemoteFileStore.UpdateFile(file); err != nil {
 			return err
 		}
 		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
 	} else if downloadFile {
-		err = s.RemoteFileStore.DownloadFile(file)
-		if err != nil {
+		if err = s.RemoteFileStore.DownloadFile(file); err != nil {
 			return err
 		}
 		fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)

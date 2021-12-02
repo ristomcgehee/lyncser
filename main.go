@@ -9,8 +9,7 @@ func main() {
 		RemoteFileStore: &DriveFileStore{},
 		LocalFileStore: &LocalFileStore{},
 	}
-	err := syncer.PerformSync()
-	if err != nil {
+	if err := syncer.PerformSync(); err != nil {
 		panic(err)
 	}
 }

@@ -62,8 +62,7 @@ func getGlobalConfig() (*GlobalConfig, error) {
 		return nil, err
 	}
 	var config GlobalConfig
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
+	if err = yaml.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
 	return &config, nil
@@ -86,8 +85,7 @@ func getLocalConfig() (*LocalConfig, error) {
 		return nil, err
 	}
 	var config LocalConfig
-	err = yaml.Unmarshal(data, &config)
-	if err != nil {
+	if err = yaml.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
 	return &config, nil
@@ -113,8 +111,7 @@ func getStateData() (*StateData, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = json.Unmarshal(data, &stateData)
-		if err != nil {
+		if err = json.Unmarshal(data, &stateData); err != nil {
 			return nil, err
 		}
 	}
@@ -131,6 +128,5 @@ func saveStateData(stateData *StateData) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(realpath, data, 0644)
-	return err
+	return ioutil.WriteFile(realpath, data, 0644)
 }
