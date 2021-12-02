@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"time"
 
@@ -36,14 +35,5 @@ func (l *LocalFileStore) DownloadFile(file utils.SyncedFile) error {
 }
 
 func (l *LocalFileStore) FileExists(file utils.SyncedFile) (bool, error) {
-	fileExistsLocally := true
-	_, err := os.Stat(file.RealPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			fileExistsLocally = false
-		} else {
-			return false, err
-		}
-	}
-	return fileExistsLocally, nil
+	return utils.PathExists(file.RealPath)
 }
