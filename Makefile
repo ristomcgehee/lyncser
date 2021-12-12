@@ -41,3 +41,8 @@ docker-interactive: build
 		-v $(shell realpath ~/.config/lyncser/token.json):/root/.config/lyncser/token.json \
 		-v $(shell realpath ~/.config/lyncser/credentials.json):/root/.config/lyncser/credentials.json \
 		lyncser 
+
+new-tag:
+	# Update the tag number manually
+	git tag v0.1.8
+	git push --tags
