@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/chrismcgehee/lyncser/utils"
@@ -14,8 +16,8 @@ func (l *LocalFileStore) GetFiles() ([]utils.StoredFile, error) {
 	panic("not implemented")
 }
 
-func (l *LocalFileStore) CreateFile(file utils.SyncedFile) error {
-	panic("not implemented")
+func (l *LocalFileStore) GetFileContents(file utils.SyncedFile) (io.ReadCloser, error) {
+	return os.Open(file.RealPath)
 }
 
 func (l *LocalFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, error) {
@@ -26,11 +28,30 @@ func (l *LocalFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, erro
 	return fileStats.ModTime(), nil
 }
 
-func (l *LocalFileStore) UpdateFile(file utils.SyncedFile) error {
-	panic("not implemented")
+func (l *LocalFileStore) WriteFileContents(file utils.SyncedFile, contentReader io.Reader) error {
+	dirName := filepath.Dir(file.RealPath)
+	pathExists, err := utils.PathExists(dirName)
+	if err != nil {
+		return err
+	}
+	if !pathExists {
+		err = os.MkdirAll(dirName, 0766)
+		if err != nil {
+			return err
+		}
+	}
+	out, err := os.OpenFile(file.RealPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	if _, err = io.Copy(out, contentReader); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (l *LocalFileStore) DownloadFile(file utils.SyncedFile) error {
+func (l *LocalFileStore) DeleteFile(file string) error {
 	panic("not implemented")
 }
 

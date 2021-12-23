@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -89,16 +88,29 @@ func (d *DriveFileStore) GetFiles() ([]utils.StoredFile, error) {
 		}
 	}
 
-
 	storedFiles := make([]utils.StoredFile, 0, len(d.mapPathToFileId))
 	for path, fileId := range d.mapPathToFileId {
 		file := d.mapIdToFile[fileId]
 		storedFiles = append(storedFiles, utils.StoredFile{
-			Path: path,
+			Path:  path,
 			IsDir: file.MimeType == mimeTypeFolder,
 		})
 	}
 	return storedFiles, nil
+}
+
+func (d *DriveFileStore) GetFileContents(file utils.SyncedFile) (io.ReadCloser, error) {
+	fileId := d.mapPathToFileId[file.FriendlyPath]
+	iface, err := makeApiCall(func() (interface{}, error) {
+		r, err := downloadFileContents(d.service, fileId)
+		return interface{}(r), err
+	}, d)
+	if err != nil {
+		return nil, err
+	}
+
+	contentsReader := iface.(io.ReadCloser)
+	return contentsReader, nil
 }
 
 // Creates this directory and any parent directories if they do not exist.
@@ -133,23 +145,23 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
 	return dirId, nil
 }
 
-func (d *DriveFileStore) CreateFile(file utils.SyncedFile) error {
-	baseName := filepath.Base(file.FriendlyPath)
-	f, err := os.Open(file.RealPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
+func (d *DriveFileStore) createFile(file utils.SyncedFile, reader io.Reader) error {
 	dirId, err := d.createDirIfNecessary(filepath.Dir(file.FriendlyPath))
 	if err != nil {
 		return err
 	}
-	_, err = makeApiCall(func() (interface{}, error) {
-		f, err := createFile(d.service, baseName, "text/plain", f, dirId)
+	baseName := filepath.Base(file.FriendlyPath)
+	iface, err := makeApiCall(func() (interface{}, error) {
+		f, err := createFile(d.service, baseName, "text/plain", reader, dirId)
 		return interface{}(f), err
 	}, d)
-	return err
+	if err != nil {
+		return err
+	}
+	driveFile := iface.(*drive.File)
+	d.mapPathToFileId[file.FriendlyPath] = driveFile.Id
+	d.mapIdToFile[driveFile.Id] = driveFile
+	return nil
 }
 
 func (d *DriveFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, error) {
@@ -162,49 +174,29 @@ func (d *DriveFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, erro
 	return modTimeCloud, nil
 }
 
-func (d *DriveFileStore) UpdateFile(file utils.SyncedFile) error {
-	fileId := d.mapPathToFileId[file.FriendlyPath]
-	driveFile := d.mapIdToFile[fileId]
-	f, err := os.Open(file.RealPath)
-	if err != nil {
-		return err
+func (d *DriveFileStore) WriteFileContents(file utils.SyncedFile, reader io.Reader) error {
+	fileId, exists := d.mapPathToFileId[file.FriendlyPath]
+	if !exists {
+		d.createFile(file, reader)
+		return nil
 	}
-	_, err = makeApiCall(func() (interface{}, error) {
-		f, err := updateFileContents(d.service, driveFile, fileId, f)
+	driveFile := d.mapIdToFile[fileId]
+	_, err := makeApiCall(func() (interface{}, error) {
+		f, err := updateFileContents(d.service, driveFile, fileId, reader)
 		return interface{}(f), err
 	}, d)
 	return err
 }
 
-func (d *DriveFileStore) DownloadFile(file utils.SyncedFile) error {
-	fileId := d.mapPathToFileId[file.FriendlyPath]
-	iface, err := makeApiCall(func() (interface{}, error) {
-		r, err := downloadFileContents(d.service, fileId)
-		return interface{}(r), err
+func (d *DriveFileStore) DeleteFile(file string) error {
+	fileId, exists := d.mapPathToFileId[file]
+	if !exists {
+		return nil
+	}
+	_, err := makeApiCall(func() (interface{}, error) {
+		err := deleteFile(d.service, fileId)
+		return nil, err
 	}, d)
-	if err != nil {
-		return err
-	}
-
-	contentsReader := iface.(io.ReadCloser)
-	defer contentsReader.Close()
-	dirName := filepath.Dir(file.RealPath)
-	pathExists, err := utils.PathExists(dirName)
-	if err != nil {
-		return err
-	}
-	if !pathExists {
-		err = os.MkdirAll(dirName, 0766)
-		if err != nil {
-			return err
-		}
-	}
-	out, err := os.OpenFile(file.RealPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, contentsReader)
 	return err
 }
 

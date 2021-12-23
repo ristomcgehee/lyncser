@@ -215,3 +215,12 @@ func updateFileContents(service *drive.Service, driveFile *drive.File, fileId st
 	}
 	return file, nil
 }
+
+// deleteFile deletes the file in Google Drive.
+func deleteFile(service *drive.Service, fileId string) error {
+	fileDeleteCall := service.Files.Delete(fileId)
+	if err := fileDeleteCall.Do(); err != nil {
+		return err
+	}
+	return nil
+}

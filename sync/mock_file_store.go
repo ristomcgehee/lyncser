@@ -5,6 +5,7 @@
 package sync
 
 import (
+	io "io"
 	reflect "reflect"
 	time "time"
 
@@ -35,32 +36,18 @@ func (m *MockFileStore) EXPECT() *MockFileStoreMockRecorder {
 	return m.recorder
 }
 
-// CreateFile mocks base method.
-func (m *MockFileStore) CreateFile(path utils.SyncedFile) error {
+// DeleteFile mocks base method.
+func (m *MockFileStore) DeleteFile(path string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateFile", path)
+	ret := m.ctrl.Call(m, "DeleteFile", path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateFile indicates an expected call of CreateFile.
-func (mr *MockFileStoreMockRecorder) CreateFile(path interface{}) *gomock.Call {
+// DeleteFile indicates an expected call of DeleteFile.
+func (mr *MockFileStoreMockRecorder) DeleteFile(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFile", reflect.TypeOf((*MockFileStore)(nil).CreateFile), path)
-}
-
-// DownloadFile mocks base method.
-func (m *MockFileStore) DownloadFile(path utils.SyncedFile) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DownloadFile", path)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DownloadFile indicates an expected call of DownloadFile.
-func (mr *MockFileStoreMockRecorder) DownloadFile(path interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadFile", reflect.TypeOf((*MockFileStore)(nil).DownloadFile), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFile", reflect.TypeOf((*MockFileStore)(nil).DeleteFile), path)
 }
 
 // FileExists mocks base method.
@@ -76,6 +63,21 @@ func (m *MockFileStore) FileExists(path utils.SyncedFile) (bool, error) {
 func (mr *MockFileStoreMockRecorder) FileExists(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileExists", reflect.TypeOf((*MockFileStore)(nil).FileExists), path)
+}
+
+// GetFileContents mocks base method.
+func (m *MockFileStore) GetFileContents(path utils.SyncedFile) (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFileContents", path)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFileContents indicates an expected call of GetFileContents.
+func (mr *MockFileStoreMockRecorder) GetFileContents(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFileContents", reflect.TypeOf((*MockFileStore)(nil).GetFileContents), path)
 }
 
 // GetFiles mocks base method.
@@ -108,16 +110,16 @@ func (mr *MockFileStoreMockRecorder) GetModifiedTime(path interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModifiedTime", reflect.TypeOf((*MockFileStore)(nil).GetModifiedTime), path)
 }
 
-// UpdateFile mocks base method.
-func (m *MockFileStore) UpdateFile(path utils.SyncedFile) error {
+// WriteFileContents mocks base method.
+func (m *MockFileStore) WriteFileContents(path utils.SyncedFile, contentReader io.Reader) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateFile", path)
+	ret := m.ctrl.Call(m, "WriteFileContents", path, contentReader)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// UpdateFile indicates an expected call of UpdateFile.
-func (mr *MockFileStoreMockRecorder) UpdateFile(path interface{}) *gomock.Call {
+// WriteFileContents indicates an expected call of WriteFileContents.
+func (mr *MockFileStoreMockRecorder) WriteFileContents(path, contentReader interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFile", reflect.TypeOf((*MockFileStore)(nil).UpdateFile), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFileContents", reflect.TypeOf((*MockFileStore)(nil).WriteFileContents), path, contentReader)
 }

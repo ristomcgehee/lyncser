@@ -15,7 +15,7 @@ import (
 type Syncer struct {
 	RemoteFileStore utils.FileStore
 	LocalFileStore  utils.FileStore
-	stateData       *StateData
+	stateData       *LocalStateData
 }
 
 // PerformSync does the entire sync from end to end.
@@ -28,7 +28,7 @@ func (s *Syncer) PerformSync() error {
 	if err != nil {
 		return err
 	}
-	s.stateData, err = getStateData()
+	s.stateData, err = getLocalStateData()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,11 @@ func (s *Syncer) PerformSync() error {
 		fmt.Printf("Error syncing file '%s': %v\n", globalConfigPath, err)
 	}
 
-	return saveStateData(s.stateData)
+	if _, err = s.cleanupRemoteFiles(remoteFiles, globalConfig); err != nil {
+		return err
+	}
+
+	return saveLocalStateData(s.stateData)
 }
 
 // Get all the remote files that start with pathToSync if it is a directory.
@@ -121,7 +125,7 @@ func (s *Syncer) handleFile(fileName string) error {
 		return err
 	}
 	if _, ok := s.stateData.FileStateData[fileName]; !ok {
-		s.stateData.FileStateData[fileName] = &FileStateData{
+		s.stateData.FileStateData[fileName] = &LocalFileStateData{
 			LastCloudUpdate: utils.GetNeverSynced(),
 		}
 	}
@@ -146,7 +150,7 @@ func (s *Syncer) handleFile(fileName string) error {
 			// The file doesn't exist locally or in the cloud. ¯\_(ツ)_/¯
 			return nil
 		}
-		if err = s.RemoteFileStore.CreateFile(file); err != nil {
+		if err = s.uploadFile(file); err != nil {
 			return err
 		}
 		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
@@ -178,12 +182,12 @@ func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool)
 	markDeleted := !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
 
 	if uploadFile {
-		if err = s.RemoteFileStore.UpdateFile(file); err != nil {
+		if err = s.uploadFile(file); err != nil {
 			return err
 		}
 		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
 	} else if downloadFile {
-		if err = s.RemoteFileStore.DownloadFile(file); err != nil {
+		if err = s.downloadFile(file); err != nil {
 			return err
 		}
 		fmt.Printf("File '%s' successfully downloaded\n", file.FriendlyPath)
@@ -192,4 +196,79 @@ func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool)
 		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = true
 	}
 	return nil
+}
+
+func (s *Syncer) uploadFile(file utils.SyncedFile) error {
+	contentReader, err := s.LocalFileStore.GetFileContents(file)
+	if err != nil {
+		return err
+	}
+	defer contentReader.Close()
+	err = s.RemoteFileStore.WriteFileContents(file, contentReader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Syncer) downloadFile(file utils.SyncedFile) error {
+	contentReader, err := s.RemoteFileStore.GetFileContents(file)
+	if err != nil {
+		return err
+	}
+	defer contentReader.Close()
+	err = s.LocalFileStore.WriteFileContents(file, contentReader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Syncer) cleanupRemoteFiles(remoteFiles []utils.StoredFile, globalConfig *GlobalConfig) (*RemoteStateData, error) {
+	remoteStateData, err := getRemoteStateData(s.RemoteFileStore)
+	if err != nil {
+		return remoteStateData, err
+	}
+
+	for _, remoteFile := range remoteFiles {
+		if strings.HasPrefix(globalConfigPath, remoteFile.Path) {
+			continue // Because globalConfigPath is not in globalConfig.TagPaths, we need to skip it here.
+		}
+		inGlobalConfig := false
+		for _, filesToSyncForTag := range globalConfig.TagPaths {
+			for _, fileToSync := range filesToSyncForTag {
+				if strings.HasPrefix(remoteFile.Path, fileToSync) || strings.HasPrefix(fileToSync, remoteFile.Path) {
+					inGlobalConfig = true
+				}
+			}
+		}
+		if inGlobalConfig {
+			delete(remoteStateData.FileStateData, remoteFile.Path)
+		} else {
+			_, exists := remoteStateData.FileStateData[remoteFile.Path]
+			if !exists {
+				remoteStateData.FileStateData[remoteFile.Path] = &RemoteFileStateData{
+					MarkDeleted: time.Now(),
+				}
+			}
+		}
+	}
+
+	// Delete files remotely if marked deleted more than 30 days ago.
+	for filePath, fileData := range remoteStateData.FileStateData {
+		if fileData.MarkDeleted.After(time.Now().AddDate(0, 0, -30)) {
+			continue
+		}
+		if err = s.RemoteFileStore.DeleteFile(filePath); err != nil {
+			return remoteStateData, err
+		}
+		delete(remoteStateData.FileStateData, filePath)
+		fmt.Printf("File '%s' deleted remotely\n", filePath)
+	}
+
+	if err := saveRemoteStateData(remoteStateData, s.RemoteFileStore); err != nil {
+		return remoteStateData, err
+	}
+
+	return remoteStateData, nil
 }

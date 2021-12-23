@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -15,12 +16,24 @@ import (
 
 const (
 	// Holds state that helps determine whether a file should be uploaded or downloaded.
-	stateFilePath    = "~/.config/lyncser/state.json"
+	stateFilePath = "~/.config/lyncser/state.json"
+	// Holds state that helps determine whether a file should be deleted remotely.
+	stateRemoteFileFile = "~/.config/lyncser/stateRemote.json"
 	// Contains global configuration used across all machines associated with this user.
 	globalConfigPath = "~/.config/lyncser/globalConfig.yaml"
 	// Contains configuration specific to this machine.
-	localConfigPath  = "~/.config/lyncser/localConfig.yaml"
+	localConfigPath = "~/.config/lyncser/localConfig.yaml"
 )
+
+type RemoteStateData struct {
+	// Key is file path. Value is the state data associated with that file.
+	FileStateData map[string]*RemoteFileStateData
+}
+
+type RemoteFileStateData struct {
+	// The datetime this file was marked as deleted.
+	MarkDeleted time.Time
+}
 
 type GlobalConfig struct {
 	// Specifies which files should be synced for machines associated with each tag. The key in this map is the tag
@@ -33,12 +46,12 @@ type LocalConfig struct {
 	Tags []string `yaml:"tags"`
 }
 
-type StateData struct {
+type LocalStateData struct {
 	// Key is file path. Value is the state data associated with that file.
-	FileStateData map[string]*FileStateData
+	FileStateData map[string]*LocalFileStateData
 }
 
-type FileStateData struct {
+type LocalFileStateData struct {
 	// The last time this file has been uploaded/downloaded from the cloud.
 	LastCloudUpdate time.Time
 	// Whether this file has been deleted locally.
@@ -91,10 +104,10 @@ func getLocalConfig() (*LocalConfig, error) {
 	return &config, nil
 }
 
-// getStateData reads and parses the state data file. If that file does not exist yet, this method will return
+// getLocalStateData reads and parses the state data file. If that file does not exist yet, this method will return
 // a newly initialized struct.
-func getStateData() (*StateData, error) {
-	var stateData StateData
+func getLocalStateData() (*LocalStateData, error) {
+	var stateData LocalStateData
 	realpath, err := utils.RealPath(stateFilePath)
 	if err != nil {
 		return nil, err
@@ -104,8 +117,8 @@ func getStateData() (*StateData, error) {
 		return nil, err
 	}
 	if errors.Is(err, os.ErrNotExist) {
-		stateData = StateData{
-			FileStateData: map[string]*FileStateData{},
+		stateData = LocalStateData{
+			FileStateData: map[string]*LocalFileStateData{},
 		}
 	} else {
 		if err != nil {
@@ -118,8 +131,8 @@ func getStateData() (*StateData, error) {
 	return &stateData, nil
 }
 
-// saveStateData will save the state data to disk.
-func saveStateData(stateData *StateData) error {
+// saveLocalStateData will save the state data to disk.
+func saveLocalStateData(stateData *LocalStateData) error {
 	data, err := json.MarshalIndent(stateData, "", " ")
 	if err != nil {
 		return err
@@ -129,4 +142,47 @@ func saveStateData(stateData *StateData) error {
 		return err
 	}
 	return ioutil.WriteFile(realpath, data, 0644)
+}
+
+// getRemoteStateData returns the state data that is stored remotely.
+func getRemoteStateData(remoteFileStore utils.FileStore) (*RemoteStateData, error) {
+	stateRemoteFile := utils.SyncedFile{
+		FriendlyPath: stateRemoteFileFile,
+	}
+	exists, err := remoteFileStore.FileExists(stateRemoteFile)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return &RemoteStateData{
+			FileStateData: map[string]*RemoteFileStateData{},
+		}, nil
+	}
+
+	contentsReader, err := remoteFileStore.GetFileContents(stateRemoteFile)
+	if err != nil {
+		return nil, err
+	}
+	defer contentsReader.Close()
+	contents, err := ioutil.ReadAll(contentsReader)
+	if err != nil {
+		return nil, err
+	}
+	var stateData *RemoteStateData
+	if err = json.Unmarshal(contents, &stateData); err != nil {
+		return nil, err
+	}
+	return stateData, nil
+}
+
+func saveRemoteStateData(stateData *RemoteStateData, remoteFileStore utils.FileStore) error {
+	stateRemoteFile := utils.SyncedFile{
+		FriendlyPath: stateRemoteFileFile,
+	}
+	data, err := json.MarshalIndent(stateData, "", " ")
+	if err != nil {
+		return err
+	}
+	reader := bytes.NewReader(data)
+	return remoteFileStore.WriteFileContents(stateRemoteFile, reader)
 }
