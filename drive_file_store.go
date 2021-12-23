@@ -113,6 +113,47 @@ func (d *DriveFileStore) GetFileContents(path string) (io.ReadCloser, error) {
 	return contentsReader, nil
 }
 
+func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
+	fileId := d.mapPathToFileId[path]
+	driveFile := d.mapIdToFile[fileId]
+	modTimeCloud, err := time.Parse(utils.TimeFormat, driveFile.ModifiedTime)
+	if err != nil {
+		return time.Now(), err
+	}
+	return modTimeCloud, nil
+}
+
+func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error {
+	fileId, exists := d.mapPathToFileId[path]
+	if !exists {
+		d.createFile(path, reader)
+		return nil
+	}
+	driveFile := d.mapIdToFile[fileId]
+	_, err := makeApiCall(func() (interface{}, error) {
+		f, err := updateFileContents(d.service, driveFile, fileId, reader)
+		return interface{}(f), err
+	}, d)
+	return err
+}
+
+func (d *DriveFileStore) DeleteFile(file string) error {
+	fileId, exists := d.mapPathToFileId[file]
+	if !exists {
+		return nil
+	}
+	_, err := makeApiCall(func() (interface{}, error) {
+		err := deleteFile(d.service, fileId)
+		return nil, err
+	}, d)
+	return err
+}
+
+func (d *DriveFileStore) FileExists(path string) (bool, error) {
+	_, ok := d.mapPathToFileId[path]
+	return ok, nil
+}
+
 // Creates this directory and any parent directories if they do not exist.
 // Returns the Google Drive file id for the directory.
 func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
@@ -162,47 +203,6 @@ func (d *DriveFileStore) createFile(path string, reader io.Reader) error {
 	d.mapPathToFileId[path] = driveFile.Id
 	d.mapIdToFile[driveFile.Id] = driveFile
 	return nil
-}
-
-func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
-	fileId := d.mapPathToFileId[path]
-	driveFile := d.mapIdToFile[fileId]
-	modTimeCloud, err := time.Parse(utils.TimeFormat, driveFile.ModifiedTime)
-	if err != nil {
-		return time.Now(), err
-	}
-	return modTimeCloud, nil
-}
-
-func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error {
-	fileId, exists := d.mapPathToFileId[path]
-	if !exists {
-		d.createFile(path, reader)
-		return nil
-	}
-	driveFile := d.mapIdToFile[fileId]
-	_, err := makeApiCall(func() (interface{}, error) {
-		f, err := updateFileContents(d.service, driveFile, fileId, reader)
-		return interface{}(f), err
-	}, d)
-	return err
-}
-
-func (d *DriveFileStore) DeleteFile(file string) error {
-	fileId, exists := d.mapPathToFileId[file]
-	if !exists {
-		return nil
-	}
-	_, err := makeApiCall(func() (interface{}, error) {
-		err := deleteFile(d.service, fileId)
-		return nil, err
-	}, d)
-	return err
-}
-
-func (d *DriveFileStore) FileExists(path string) (bool, error) {
-	_, ok := d.mapPathToFileId[path]
-	return ok, nil
 }
 
 // Attempts an API call, and if it fails due to invalid token, will obtain a new one and try the API call again.
