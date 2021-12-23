@@ -16,9 +16,9 @@ import (
 
 const (
 	// Holds state that helps determine whether a file should be uploaded or downloaded.
-	stateFilePath = "~/.config/lyncser/state.json"
+	stateLocalFilePath = "~/.config/lyncser/state.json"
 	// Holds state that helps determine whether a file should be deleted remotely.
-	stateRemoteFileFile = "~/.config/lyncser/stateRemote.json"
+	stateRemoteFilePath = "~/.config/lyncser/stateRemote.json"
 	// Contains global configuration used across all machines associated with this user.
 	globalConfigPath = "~/.config/lyncser/globalConfig.yaml"
 	// Contains configuration specific to this machine.
@@ -108,7 +108,7 @@ func getLocalConfig() (*LocalConfig, error) {
 // a newly initialized struct.
 func getLocalStateData() (*LocalStateData, error) {
 	var stateData LocalStateData
-	realpath, err := utils.RealPath(stateFilePath)
+	realpath, err := utils.RealPath(stateLocalFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func saveLocalStateData(stateData *LocalStateData) error {
 	if err != nil {
 		return err
 	}
-	realpath, err := utils.RealPath(stateFilePath)
+	realpath, err := utils.RealPath(stateLocalFilePath)
 	if err != nil {
 		return err
 	}
@@ -146,10 +146,7 @@ func saveLocalStateData(stateData *LocalStateData) error {
 
 // getRemoteStateData returns the state data that is stored remotely.
 func getRemoteStateData(remoteFileStore utils.FileStore) (*RemoteStateData, error) {
-	stateRemoteFile := utils.SyncedFile{
-		FriendlyPath: stateRemoteFileFile,
-	}
-	exists, err := remoteFileStore.FileExists(stateRemoteFile)
+	exists, err := remoteFileStore.FileExists(stateRemoteFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +156,7 @@ func getRemoteStateData(remoteFileStore utils.FileStore) (*RemoteStateData, erro
 		}, nil
 	}
 
-	contentsReader, err := remoteFileStore.GetFileContents(stateRemoteFile)
+	contentsReader, err := remoteFileStore.GetFileContents(stateRemoteFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -176,13 +173,10 @@ func getRemoteStateData(remoteFileStore utils.FileStore) (*RemoteStateData, erro
 }
 
 func saveRemoteStateData(stateData *RemoteStateData, remoteFileStore utils.FileStore) error {
-	stateRemoteFile := utils.SyncedFile{
-		FriendlyPath: stateRemoteFileFile,
-	}
 	data, err := json.MarshalIndent(stateData, "", " ")
 	if err != nil {
 		return err
 	}
 	reader := bytes.NewReader(data)
-	return remoteFileStore.WriteFileContents(stateRemoteFile, reader)
+	return remoteFileStore.WriteFileContents(stateRemoteFilePath, reader)
 }

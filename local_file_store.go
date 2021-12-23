@@ -16,20 +16,20 @@ func (l *LocalFileStore) GetFiles() ([]utils.StoredFile, error) {
 	panic("not implemented")
 }
 
-func (l *LocalFileStore) GetFileContents(file utils.SyncedFile) (io.ReadCloser, error) {
-	return os.Open(file.RealPath)
+func (l *LocalFileStore) GetFileContents(path string) (io.ReadCloser, error) {
+	return os.Open(path)
 }
 
-func (l *LocalFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, error) {
-	fileStats, err := os.Stat(file.RealPath)
+func (l *LocalFileStore) GetModifiedTime(path string) (time.Time, error) {
+	fileStats, err := os.Stat(path)
 	if err != nil {
 		return time.Now(), err
 	}
 	return fileStats.ModTime(), nil
 }
 
-func (l *LocalFileStore) WriteFileContents(file utils.SyncedFile, contentReader io.Reader) error {
-	dirName := filepath.Dir(file.RealPath)
+func (l *LocalFileStore) WriteFileContents(path string, contentReader io.Reader) error {
+	dirName := filepath.Dir(path)
 	pathExists, err := utils.PathExists(dirName)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (l *LocalFileStore) WriteFileContents(file utils.SyncedFile, contentReader 
 			return err
 		}
 	}
-	out, err := os.OpenFile(file.RealPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
@@ -51,10 +51,10 @@ func (l *LocalFileStore) WriteFileContents(file utils.SyncedFile, contentReader 
 	return nil
 }
 
-func (l *LocalFileStore) DeleteFile(file string) error {
+func (l *LocalFileStore) DeleteFile(path string) error {
 	panic("not implemented")
 }
 
-func (l *LocalFileStore) FileExists(file utils.SyncedFile) (bool, error) {
-	return utils.PathExists(file.RealPath)
+func (l *LocalFileStore) FileExists(path string) (bool, error) {
+	return utils.PathExists(path)
 }

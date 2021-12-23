@@ -99,8 +99,8 @@ func (d *DriveFileStore) GetFiles() ([]utils.StoredFile, error) {
 	return storedFiles, nil
 }
 
-func (d *DriveFileStore) GetFileContents(file utils.SyncedFile) (io.ReadCloser, error) {
-	fileId := d.mapPathToFileId[file.FriendlyPath]
+func (d *DriveFileStore) GetFileContents(path string) (io.ReadCloser, error) {
+	fileId := d.mapPathToFileId[path]
 	iface, err := makeApiCall(func() (interface{}, error) {
 		r, err := downloadFileContents(d.service, fileId)
 		return interface{}(r), err
@@ -145,12 +145,12 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
 	return dirId, nil
 }
 
-func (d *DriveFileStore) createFile(file utils.SyncedFile, reader io.Reader) error {
-	dirId, err := d.createDirIfNecessary(filepath.Dir(file.FriendlyPath))
+func (d *DriveFileStore) createFile(path string, reader io.Reader) error {
+	dirId, err := d.createDirIfNecessary(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
-	baseName := filepath.Base(file.FriendlyPath)
+	baseName := filepath.Base(path)
 	iface, err := makeApiCall(func() (interface{}, error) {
 		f, err := createFile(d.service, baseName, "text/plain", reader, dirId)
 		return interface{}(f), err
@@ -159,13 +159,13 @@ func (d *DriveFileStore) createFile(file utils.SyncedFile, reader io.Reader) err
 		return err
 	}
 	driveFile := iface.(*drive.File)
-	d.mapPathToFileId[file.FriendlyPath] = driveFile.Id
+	d.mapPathToFileId[path] = driveFile.Id
 	d.mapIdToFile[driveFile.Id] = driveFile
 	return nil
 }
 
-func (d *DriveFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, error) {
-	fileId := d.mapPathToFileId[file.FriendlyPath]
+func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
+	fileId := d.mapPathToFileId[path]
 	driveFile := d.mapIdToFile[fileId]
 	modTimeCloud, err := time.Parse(utils.TimeFormat, driveFile.ModifiedTime)
 	if err != nil {
@@ -174,10 +174,10 @@ func (d *DriveFileStore) GetModifiedTime(file utils.SyncedFile) (time.Time, erro
 	return modTimeCloud, nil
 }
 
-func (d *DriveFileStore) WriteFileContents(file utils.SyncedFile, reader io.Reader) error {
-	fileId, exists := d.mapPathToFileId[file.FriendlyPath]
+func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error {
+	fileId, exists := d.mapPathToFileId[path]
 	if !exists {
-		d.createFile(file, reader)
+		d.createFile(path, reader)
 		return nil
 	}
 	driveFile := d.mapIdToFile[fileId]
@@ -200,8 +200,8 @@ func (d *DriveFileStore) DeleteFile(file string) error {
 	return err
 }
 
-func (d *DriveFileStore) FileExists(file utils.SyncedFile) (bool, error) {
-	_, ok := d.mapPathToFileId[file.FriendlyPath]
+func (d *DriveFileStore) FileExists(path string) (bool, error) {
+	_, ok := d.mapPathToFileId[path]
 	return ok, nil
 }
 

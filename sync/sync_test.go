@@ -20,16 +20,16 @@ func panicError(err error) {
 }
 
 // Gets the context used by most steps.
-func unwrapContext(ctx gobdd.Context) (*Syncer, utils.SyncedFile) {
+func unwrapContext(ctx gobdd.Context) (*Syncer, SyncedFile) {
 	syncerIf, _ := ctx.Get("syncer")
 	var syncer *Syncer
 	if syncerIf != nil {
 		syncer = syncerIf.(*Syncer)
 	}
 	syncedFileIf, _ := ctx.Get("syncedFile")
-	var syncedFile utils.SyncedFile
+	var syncedFile SyncedFile
 	if syncedFileIf != nil {
-		syncedFile = syncedFileIf.(utils.SyncedFile)
+		syncedFile = syncedFileIf.(SyncedFile)
 	}
 	return syncer, syncedFile
 }
@@ -60,9 +60,11 @@ type assertExpectationFunc func(t gobdd.StepTest, ctx gobdd.Context)
 
 // With gobdd the context set during steps cannot be accessed in the WithAfterScenario function, so that's
 // why I'm using these global variables.
-var expectations = []assertExpectationFunc{}
-var globalConfig = &GlobalConfig{}
-var remoteFiles = []utils.StoredFile{}
+var (
+	expectations = []assertExpectationFunc{}
+	globalConfig = &GlobalConfig{}
+	remoteFiles  = []utils.StoredFile{}
+)
 
 func addExpectation(t gobdd.StepTest, ctx gobdd.Context, expectation assertExpectationFunc) {
 	expectations = append(expectations, expectation)
@@ -74,7 +76,7 @@ func fileExistsLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		FileExists(gomock.Eq(syncedFile)).
+		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(true, nil).AnyTimes()
 }
 
@@ -82,7 +84,7 @@ func fileDoesntExistLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		FileExists(gomock.Eq(syncedFile)).
+		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(false, nil).AnyTimes()
 }
 
@@ -90,7 +92,7 @@ func localModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		GetModifiedTime(gomock.Eq(syncedFile)).
+		GetModifiedTime(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(convertTime(modifiedTime), nil).AnyTimes()
 }
 
@@ -114,7 +116,7 @@ func fileExistsInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
-		FileExists(gomock.Eq(syncedFile)).
+		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(true, nil).AnyTimes()
 }
 
@@ -122,7 +124,7 @@ func fileDoesntExistInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
-		FileExists(gomock.Eq(syncedFile)).
+		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(false, nil).AnyTimes()
 }
 
@@ -130,7 +132,7 @@ func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 	syncer, syncedFile := unwrapContext(ctx)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
-		GetModifiedTime(gomock.Eq(syncedFile)).
+		GetModifiedTime(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(convertTime(modifiedTime), nil).AnyTimes()
 }
 
@@ -144,9 +146,7 @@ func remoteStateDataFileDoesNotExist(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, _ := unwrapContext(ctx)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
-		FileExists(gomock.Eq(utils.SyncedFile{
-			FriendlyPath: stateRemoteFileFile,
-		})).
+		FileExists(gomock.Eq(stateRemoteFilePath)).
 		Return(false, nil)
 }
 
@@ -156,22 +156,22 @@ func fileUpdatedCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		GetFileContents(gomock.Eq(syncedFile)).
+		GetFileContents(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(io.NopCloser(strings.NewReader("string")), nil)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
-		WriteFileContents(gomock.Eq(syncedFile), gomock.Any())
+		WriteFileContents(gomock.Eq(syncedFile.FriendlyPath), gomock.Any())
 }
 
 func fileDownloadedFromCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
-		GetFileContents(gomock.Eq(syncedFile)).
+		GetFileContents(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(io.NopCloser(strings.NewReader("string")), nil)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		WriteFileContents(gomock.Eq(syncedFile), gomock.Any())
+		WriteFileContents(gomock.Eq(syncedFile.FriendlyPath), gomock.Any())
 }
 
 func shouldBeDeletedLocally(t gobdd.StepTest, ctx gobdd.Context) {
@@ -186,7 +186,7 @@ func shouldBeDeletedLocally(t gobdd.StepTest, ctx gobdd.Context) {
 }
 
 func remoteDataShouldBeEmpty(t gobdd.StepTest, ctx gobdd.Context) {
-	addExpectation(t, ctx,  func(t gobdd.StepTest, ctx gobdd.Context) {
+	addExpectation(t, ctx, func(t gobdd.StepTest, ctx gobdd.Context) {
 		iface, _ := ctx.Get("remoteStateData")
 		remoteStateData := iface.(*RemoteStateData)
 		if len(remoteStateData.FileStateData) > 0 {
@@ -241,7 +241,7 @@ func addCommonSetup(suite *gobdd.Suite) {
 }
 
 func TestHandleFile(t *testing.T) {
-	syncedFile := utils.SyncedFile{
+	syncedFile := SyncedFile{
 		FriendlyPath: "~/test_file1",
 		RealPath:     "/home/chris/test_file1",
 	}
@@ -287,9 +287,7 @@ func TestCleanupRemoteFiles(t *testing.T) {
 		}
 		remoteFiles = []utils.StoredFile{}
 		remoteFileStore.EXPECT().
-			WriteFileContents(gomock.Eq(utils.SyncedFile{
-				FriendlyPath: stateRemoteFileFile,
-			}), gomock.Any())
+			WriteFileContents(gomock.Eq(stateRemoteFilePath), gomock.Any())
 		expectations = []assertExpectationFunc{}
 	}), gobdd.WithAfterScenario(func(ctx gobdd.Context) {
 		remoteStateData, _ := syncer.cleanupRemoteFiles(remoteFiles, globalConfig)

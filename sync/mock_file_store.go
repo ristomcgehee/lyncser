@@ -51,7 +51,7 @@ func (mr *MockFileStoreMockRecorder) DeleteFile(path interface{}) *gomock.Call {
 }
 
 // FileExists mocks base method.
-func (m *MockFileStore) FileExists(path utils.SyncedFile) (bool, error) {
+func (m *MockFileStore) FileExists(path string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FileExists", path)
 	ret0, _ := ret[0].(bool)
@@ -66,7 +66,7 @@ func (mr *MockFileStoreMockRecorder) FileExists(path interface{}) *gomock.Call {
 }
 
 // GetFileContents mocks base method.
-func (m *MockFileStore) GetFileContents(path utils.SyncedFile) (io.ReadCloser, error) {
+func (m *MockFileStore) GetFileContents(path string) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFileContents", path)
 	ret0, _ := ret[0].(io.ReadCloser)
@@ -96,7 +96,7 @@ func (mr *MockFileStoreMockRecorder) GetFiles() *gomock.Call {
 }
 
 // GetModifiedTime mocks base method.
-func (m *MockFileStore) GetModifiedTime(path utils.SyncedFile) (time.Time, error) {
+func (m *MockFileStore) GetModifiedTime(path string) (time.Time, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetModifiedTime", path)
 	ret0, _ := ret[0].(time.Time)
@@ -111,7 +111,7 @@ func (mr *MockFileStoreMockRecorder) GetModifiedTime(path interface{}) *gomock.C
 }
 
 // WriteFileContents mocks base method.
-func (m *MockFileStore) WriteFileContents(path utils.SyncedFile, contentReader io.Reader) error {
+func (m *MockFileStore) WriteFileContents(path string, contentReader io.Reader) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteFileContents", path, contentReader)
 	ret0, _ := ret[0].(error)

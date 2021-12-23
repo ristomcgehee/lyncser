@@ -12,6 +12,11 @@ import (
 	"github.com/chrismcgehee/lyncser/utils"
 )
 
+type SyncedFile struct {
+	FriendlyPath string
+	RealPath     string
+}
+
 type Syncer struct {
 	RemoteFileStore utils.FileStore
 	LocalFileStore  utils.FileStore
@@ -116,11 +121,11 @@ func (s *Syncer) handleFile(fileName string) error {
 	if err != nil {
 		return err
 	}
-	file := utils.SyncedFile{
+	file := SyncedFile{
 		FriendlyPath: fileName,
 		RealPath:     realPath,
 	}
-	fileExistsLocally, err := s.LocalFileStore.FileExists(file)
+	fileExistsLocally, err := s.LocalFileStore.FileExists(file.FriendlyPath)
 	if err != nil {
 		return err
 	}
@@ -137,7 +142,7 @@ func (s *Syncer) handleFile(fileName string) error {
 		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = false
 	}
 	fmt.Println("Syncing", fileName)
-	fileExistsRemotely, err := s.RemoteFileStore.FileExists(file)
+	fileExistsRemotely, err := s.RemoteFileStore.FileExists(file.FriendlyPath)
 	if err != nil {
 		return err
 	}
@@ -160,14 +165,14 @@ func (s *Syncer) handleFile(fileName string) error {
 }
 
 // syncExistingFile uploads/downloads the file as necessary
-func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool) error {
-	modTimeCloud, err := s.RemoteFileStore.GetModifiedTime(file)
+func (s *Syncer) syncExistingFile(file SyncedFile, fileExistsLocally bool) error {
+	modTimeCloud, err := s.RemoteFileStore.GetModifiedTime(file.FriendlyPath)
 	if err != nil {
 		return err
 	}
 	var modTimeLocal time.Time
 	if fileExistsLocally {
-		modTimeLocal, err = s.LocalFileStore.GetModifiedTime(file)
+		modTimeLocal, err = s.LocalFileStore.GetModifiedTime(file.FriendlyPath)
 		if err != nil {
 			return err
 		}
@@ -198,26 +203,26 @@ func (s *Syncer) syncExistingFile(file utils.SyncedFile, fileExistsLocally bool)
 	return nil
 }
 
-func (s *Syncer) uploadFile(file utils.SyncedFile) error {
-	contentReader, err := s.LocalFileStore.GetFileContents(file)
+func (s *Syncer) uploadFile(file SyncedFile) error {
+	contentReader, err := s.LocalFileStore.GetFileContents(file.FriendlyPath)
 	if err != nil {
 		return err
 	}
 	defer contentReader.Close()
-	err = s.RemoteFileStore.WriteFileContents(file, contentReader)
+	err = s.RemoteFileStore.WriteFileContents(file.FriendlyPath, contentReader)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Syncer) downloadFile(file utils.SyncedFile) error {
-	contentReader, err := s.RemoteFileStore.GetFileContents(file)
+func (s *Syncer) downloadFile(file SyncedFile) error {
+	contentReader, err := s.RemoteFileStore.GetFileContents(file.FriendlyPath)
 	if err != nil {
 		return err
 	}
 	defer contentReader.Close()
-	err = s.LocalFileStore.WriteFileContents(file, contentReader)
+	err = s.LocalFileStore.WriteFileContents(file.FriendlyPath, contentReader)
 	if err != nil {
 		return err
 	}
