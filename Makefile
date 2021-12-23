@@ -44,5 +44,5 @@ docker-interactive: build
 
 new-tag:
 	# Update the tag number manually
-	git tag v0.1.8
+	git tag v0.1.9
 	git push --tags
