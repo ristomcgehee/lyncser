@@ -76,7 +76,7 @@ func fileExistsLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
+		FileExists(gomock.Eq(syncedFile.RealPath)).
 		Return(true, nil).AnyTimes()
 }
 
@@ -84,7 +84,7 @@ func fileDoesntExistLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
+		FileExists(gomock.Eq(syncedFile.RealPath)).
 		Return(false, nil).AnyTimes()
 }
 
@@ -92,7 +92,7 @@ func localModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		GetModifiedTime(gomock.Eq(syncedFile.FriendlyPath)).
+		GetModifiedTime(gomock.Eq(syncedFile.RealPath)).
 		Return(convertTime(modifiedTime), nil).AnyTimes()
 }
 
@@ -156,7 +156,7 @@ func fileUpdatedCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		GetFileContents(gomock.Eq(syncedFile.FriendlyPath)).
+		GetFileContents(gomock.Eq(syncedFile.RealPath)).
 		Return(io.NopCloser(strings.NewReader("string")), nil)
 	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
 	cloudFileStore.EXPECT().
@@ -171,7 +171,7 @@ func fileDownloadedFromCloud(t gobdd.StepTest, ctx gobdd.Context) {
 		Return(io.NopCloser(strings.NewReader("string")), nil)
 	localFileStore := syncer.LocalFileStore.(*MockFileStore)
 	localFileStore.EXPECT().
-		WriteFileContents(gomock.Eq(syncedFile.FriendlyPath), gomock.Any())
+		WriteFileContents(gomock.Eq(syncedFile.RealPath), gomock.Any())
 }
 
 func shouldBeDeletedLocally(t gobdd.StepTest, ctx gobdd.Context) {
