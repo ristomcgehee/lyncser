@@ -36,6 +36,20 @@ func (m *MockFileStore) EXPECT() *MockFileStoreMockRecorder {
 	return m.recorder
 }
 
+// DeleteAllFiles mocks base method.
+func (m *MockFileStore) DeleteAllFiles() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAllFiles")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAllFiles indicates an expected call of DeleteAllFiles.
+func (mr *MockFileStoreMockRecorder) DeleteAllFiles() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllFiles", reflect.TypeOf((*MockFileStore)(nil).DeleteAllFiles))
+}
+
 // DeleteFile mocks base method.
 func (m *MockFileStore) DeleteFile(path string) error {
 	m.ctrl.T.Helper()

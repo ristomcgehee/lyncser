@@ -163,6 +163,14 @@ func (d *DriveFileStore) DeleteFile(file string) error {
 	return err
 }
 
+func (d *DriveFileStore) DeleteAllFiles() error {
+	_, err := makeApiCall(func() (interface{}, error) {
+		err := deleteFile(d.service, d.lyncserRootId)
+		return nil, err
+	}, d)
+	return err
+}
+
 func (d *DriveFileStore) FileExists(path string) (bool, error) {
 	_, ok := d.getFiledId(path)
 	return ok, nil

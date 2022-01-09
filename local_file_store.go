@@ -55,6 +55,10 @@ func (l *LocalFileStore) DeleteFile(path string) error {
 	panic("not implemented")
 }
 
+func (l *LocalFileStore) DeleteAllFiles() error {
+	panic("not implemented")
+}
+
 func (l *LocalFileStore) FileExists(path string) (bool, error) {
 	return utils.PathExists(path)
 }

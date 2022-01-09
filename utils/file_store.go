@@ -14,6 +14,8 @@ type FileStore interface {
 	WriteFileContents(path string, contentReader io.Reader) error
 	// DeleteFile deletes the file in this file store.
 	DeleteFile(path string) error
+	// DeleteAllFiles deletes all files in this file store.
+	DeleteAllFiles() error
 	// GetModifiedTime returns the time the file was last modified.
 	GetModifiedTime(path string) (time.Time, error)
 	// FileExists returns true if the file exists in this file store.
