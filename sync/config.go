@@ -2,6 +2,8 @@ package sync
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -23,6 +25,10 @@ const (
 	globalConfigPath = "~/.config/lyncser/globalConfig.yaml"
 	// Contains configuration specific to this machine.
 	localConfigPath = "~/.config/lyncser/localConfig.yaml"
+	// Key for encrypting files.
+	encryptionKeyPath = "~/.config/lyncser/encryption.key"
+	// Length of encryption key.
+	keyLengthBits = 256
 )
 
 type RemoteStateData struct {
@@ -179,4 +185,29 @@ func saveRemoteStateData(stateData *RemoteStateData, remoteFileStore utils.FileS
 	}
 	reader := bytes.NewReader(data)
 	return remoteFileStore.WriteFileContents(stateRemoteFilePath, reader)
+}
+
+func GetEncryptionKey() ([]byte, error) {
+	keyBytes := make([]byte, keyLengthBits/8)
+	fullEncryptionKeyPath, err := utils.RealPath(encryptionKeyPath)
+	if err != nil {
+		return keyBytes, err
+	}
+	var keyHex string
+	keyFileBytes, err := ioutil.ReadFile(fullEncryptionKeyPath)
+	if errors.Is(err, os.ErrNotExist) {
+		// Generate a new key.
+		if _, err := rand.Read(keyBytes); err != nil {
+			return keyBytes, err
+		}
+		keyHex = hex.EncodeToString(keyBytes)
+		err = os.WriteFile(fullEncryptionKeyPath, []byte(keyHex), 0600)
+	} else if err == nil {
+		keyHex = string(keyFileBytes)
+	}
+	if err != nil {
+		return keyBytes, err
+	}
+	keyBytes, err = hex.DecodeString(keyHex)
+	return keyBytes, err
 }

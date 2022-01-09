@@ -88,9 +88,9 @@ func (s *Syncer) PerformSync() error {
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
-	if err = s.handleFile(globalConfigPath); err != nil {
-		fmt.Printf("Error syncing file '%s': %v\n", globalConfigPath, err)
-	}
+	// if err = s.handleFile(globalConfigPath); err != nil {
+	// 	fmt.Printf("Error syncing file '%s': %v\n", globalConfigPath, err)
+	// }
 
 	if _, err = s.cleanupRemoteFiles(remoteFiles, globalConfig); err != nil {
 		return err
@@ -125,7 +125,7 @@ func (s *Syncer) handleFile(fileName string) error {
 		FriendlyPath: fileName,
 		RealPath:     realPath,
 	}
-	fileExistsLocally, err := s.LocalFileStore.FileExists(file.FriendlyPath)
+	fileExistsLocally, err := s.LocalFileStore.FileExists(file.RealPath)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (s *Syncer) handleFile(fileName string) error {
 		if err = s.uploadFile(file); err != nil {
 			return err
 		}
-		fmt.Printf("File '%s' successfully created\n", file.FriendlyPath)
+		fmt.Printf("File '%s' successfully uploaded\n", file.FriendlyPath)
 	}
 	s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	return nil
@@ -172,7 +172,7 @@ func (s *Syncer) syncExistingFile(file SyncedFile, fileExistsLocally bool) error
 	}
 	var modTimeLocal time.Time
 	if fileExistsLocally {
-		modTimeLocal, err = s.LocalFileStore.GetModifiedTime(file.FriendlyPath)
+		modTimeLocal, err = s.LocalFileStore.GetModifiedTime(file.RealPath)
 		if err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func (s *Syncer) syncExistingFile(file SyncedFile, fileExistsLocally bool) error
 }
 
 func (s *Syncer) uploadFile(file SyncedFile) error {
-	contentReader, err := s.LocalFileStore.GetFileContents(file.FriendlyPath)
+	contentReader, err := s.LocalFileStore.GetFileContents(file.RealPath)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (s *Syncer) downloadFile(file SyncedFile) error {
 		return err
 	}
 	defer contentReader.Close()
-	err = s.LocalFileStore.WriteFileContents(file.FriendlyPath, contentReader)
+	err = s.LocalFileStore.WriteFileContents(file.RealPath, contentReader)
 	if err != nil {
 		return err
 	}

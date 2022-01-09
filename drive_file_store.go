@@ -13,7 +13,9 @@ import (
 
 // File store that uses Google Drive.
 type DriveFileStore struct {
-	service *drive.Service
+	// Used to encrypt files stored in Google Drive.
+	Encryptor utils.AESGCMEncryptor
+	service   *drive.Service
 	// Key is the file's friendly name. Value is Google Drive file id. Contains an entry for each file/directory
 	// in Google Drive that was created by lyncser.
 	mapPathToFileId map[string]string
@@ -108,9 +110,15 @@ func (d *DriveFileStore) GetFileContents(path string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	contentsReader := iface.(io.ReadCloser)
-	return contentsReader, nil
+	defer contentsReader.Close()
+
+	decryptedReader, err := d.Encryptor.DecryptReader(contentsReader)
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptedReader, nil
 }
 
 func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
@@ -124,14 +132,19 @@ func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
 }
 
 func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error {
+	readerEncrypted, err := d.Encryptor.EncryptReader(reader)
+	if err != nil {
+		return err
+	}
+
 	fileId, exists := d.mapPathToFileId[path]
 	if !exists {
-		d.createFile(path, reader)
+		d.createFile(path, readerEncrypted)
 		return nil
 	}
 	driveFile := d.mapIdToFile[fileId]
-	_, err := makeApiCall(func() (interface{}, error) {
-		f, err := updateFileContents(d.service, driveFile, fileId, reader)
+	_, err = makeApiCall(func() (interface{}, error) {
+		f, err := updateFileContents(d.service, driveFile, fileId, readerEncrypted)
 		return interface{}(f), err
 	}, d)
 	return err
