@@ -88,9 +88,9 @@ func (s *Syncer) PerformSync() error {
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
-	// if err = s.handleFile(globalConfigPath); err != nil {
-	// 	fmt.Printf("Error syncing file '%s': %v\n", globalConfigPath, err)
-	// }
+	if err = s.handleFile(globalConfigPath); err != nil {
+		fmt.Printf("Error syncing file '%s': %v\n", globalConfigPath, err)
+	}
 
 	if _, err = s.cleanupRemoteFiles(remoteFiles, globalConfig); err != nil {
 		return err
