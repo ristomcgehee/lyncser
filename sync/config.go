@@ -119,9 +119,6 @@ func getLocalStateData() (*LocalStateData, error) {
 		return nil, err
 	}
 	data, err := ioutil.ReadFile(realpath)
-	if err != nil {
-		return nil, err
-	}
 	if errors.Is(err, os.ErrNotExist) {
 		stateData = LocalStateData{
 			FileStateData: map[string]*LocalFileStateData{},

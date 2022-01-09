@@ -152,7 +152,7 @@ func (s *Syncer) handleFile(fileName string) error {
 		}
 	} else {
 		if !fileExistsLocally {
-			// The file doesn't exist locally or in the cloud. ¯\_(ツ)_/¯
+			fmt.Printf("File '%s' does not exist locally or remotely\n", file.FriendlyPath) // ¯\_(ツ)_/¯
 			return nil
 		}
 		if err = s.uploadFile(file); err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"google.golang.org/api/drive/v3"
@@ -102,7 +103,7 @@ func (d *DriveFileStore) GetFiles() ([]utils.StoredFile, error) {
 }
 
 func (d *DriveFileStore) GetFileContents(path string) (io.ReadCloser, error) {
-	fileId := d.mapPathToFileId[path]
+	fileId, _ := d.getFiledId(path)
 	iface, err := makeApiCall(func() (interface{}, error) {
 		r, err := downloadFileContents(d.service, fileId)
 		return interface{}(r), err
@@ -122,7 +123,7 @@ func (d *DriveFileStore) GetFileContents(path string) (io.ReadCloser, error) {
 }
 
 func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
-	fileId := d.mapPathToFileId[path]
+	fileId, _ := d.getFiledId(path)
 	driveFile := d.mapIdToFile[fileId]
 	modTimeCloud, err := time.Parse(utils.TimeFormat, driveFile.ModifiedTime)
 	if err != nil {
@@ -137,7 +138,7 @@ func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error 
 		return err
 	}
 
-	fileId, exists := d.mapPathToFileId[path]
+	fileId, exists := d.getFiledId(path)
 	if !exists {
 		d.createFile(path, readerEncrypted)
 		return nil
@@ -151,7 +152,7 @@ func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error 
 }
 
 func (d *DriveFileStore) DeleteFile(file string) error {
-	fileId, exists := d.mapPathToFileId[file]
+	fileId, exists := d.getFiledId(file)
 	if !exists {
 		return nil
 	}
@@ -163,8 +164,19 @@ func (d *DriveFileStore) DeleteFile(file string) error {
 }
 
 func (d *DriveFileStore) FileExists(path string) (bool, error) {
-	_, ok := d.mapPathToFileId[path]
+	_, ok := d.getFiledId(path)
 	return ok, nil
+}
+
+// getFiledId returns the Google Drive file id for the given path if it exists, otherwise it returns false for
+// the second return value.
+func (d *DriveFileStore) getFiledId(path string) (string, bool) {
+	// When stored in Google Drive, file names do not start with '/'.
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	fileId, ok := d.mapPathToFileId[path]
+	return fileId, ok
 }
 
 // Creates this directory and any parent directories if they do not exist.
@@ -173,13 +185,13 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
 	if dirName == "" || dirName == "." || dirName == "/" {
 		return d.lyncserRootId, nil
 	}
-	dirId, ok := d.mapPathToFileId[dirName]
+	dirId, ok := d.getFiledId(dirName)
 	if ok {
 		return dirId, nil // This directory already exists
 	}
 	var err error
 	parent := filepath.Dir(dirName)
-	parentId, ok := d.mapPathToFileId[parent]
+	parentId, ok := d.getFiledId(parent)
 	if !ok {
 		// The parent directory does not exist either. Recursively create it.
 		parentId, err = d.createDirIfNecessary(parent)
