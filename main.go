@@ -48,12 +48,12 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
+	files, err := remoteFileStore.GetFiles()
+	if err != nil {
+		panic(err)
+	}
 	yes, _ := cmd.Flags().GetBool("yes")
 	if !yes {
-		files, err := remoteFileStore.GetFiles()
-		if err != nil {
-			panic(err)
-		}
 		fmt.Printf("This will delete all %d files in the remote file store. Are you sure you want to continue? (y/n): ", len(files))
 		var input string
 		fmt.Scanln(&input)

@@ -2,6 +2,7 @@ from os import mkdir
 import os
 import subprocess
 import tempfile
+from typing import List
 
 config_dir_container = '/lyncser_config'
 data_dir_container = '/lyncser_data'
@@ -13,8 +14,8 @@ class LyncserClient(object):
         self.data_dir_host = data_dir_host
         self.container_id = container_id
     
-    def run_lyncser(self):
-        subprocess.run(['docker', 'exec', self.container_id, 'lyncser'])
+    def run_lyncser(self, args: List[str]):
+        subprocess.run(['docker', 'exec', self.container_id, 'lyncser'] + args, check=True)
     
     def write_data_file(self, filename: str, content: str):
         data_file_path = os.path.join(self.data_dir_host, filename)
@@ -40,6 +41,11 @@ class LyncserClient(object):
 def test_upload_download():
     client1 = create_client()
     client2 = create_client()
+    encryption_key = '166d8e96ae29d01dd155f840ac61657acfaa63bc24d15457183e9da03d33ef56'
+    client1.write_config_file('encryption.key', encryption_key)
+    client2.write_config_file('encryption.key', encryption_key)
+    client1.run_lyncser(['deleteAllRemoteFiles', '-y'])
+
     file1 = 'test1.txt'
     file1_contents = 'test1'
     client1.write_data_file(file1, file1_contents)
@@ -49,11 +55,8 @@ def test_upload_download():
 """
     client1.write_config_file('globalConfig.yaml', global_config)
     client2.write_config_file('globalConfig.yaml', global_config)
-    encryption_key = '166d8e96ae29d01dd155f840ac61657acfaa63bc24d15457183e9da03d33ef56'
-    client1.write_config_file('encryption.key', encryption_key)
-    client2.write_config_file('encryption.key', encryption_key)
-    client1.run_lyncser()
-    client2.run_lyncser()
+    client1.run_lyncser(['sync'])
+    client2.run_lyncser(['sync'])
 
     assert client2.get_data_file_content(file1) == file1_contents
 
