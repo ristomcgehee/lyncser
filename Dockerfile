@@ -12,4 +12,6 @@ RUN apt-get update && apt-get install -y \
     # Just so we can get trusted certificates
     curl
 
+RUN mkdir -p /lyncser_data /lyncser_config
+
 COPY --from=builder /build/lyncser /usr/local/bin/lyncser
