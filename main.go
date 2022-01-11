@@ -6,6 +6,7 @@ import (
 	"github.com/chrismcgehee/lyncser/sync"
 	"github.com/chrismcgehee/lyncser/utils"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var rootCmd = &cobra.Command{
@@ -13,44 +14,75 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(
-		&cobra.Command{
-			Use: "sync",
-			Short: "Syncs the files that are configured to be synced.",
-			Run: syncCmd,
-		},
-	)
-	deleteFilesCmd := &cobra.Command{
-		Use: "deleteAllRemoteFiles",
-		Short: "Deletes all files in the remote file store.",
-		Run: deleteRemoteFiles,
+	syncCmd := &cobra.Command{
+		Use:   "sync",
+		Short: "Syncs the files that are configured to be synced.",
+		Run:   syncCmd,
 	}
+	addCommonFlags(syncCmd)
+	rootCmd.AddCommand(syncCmd)
+	deleteFilesCmd := &cobra.Command{
+		Use:   "deleteAllRemoteFiles",
+		Short: "Deletes all files in the remote file store.",
+		Run:   deleteRemoteFiles,
+	}
+	addCommonFlags(deleteFilesCmd)
 	deleteFilesCmd.Flags().BoolP("yes", "y", false, "Confirm deletion of all remote files")
 	rootCmd.AddCommand(deleteFilesCmd)
 }
 
+func addCommonFlags(cmd *cobra.Command) {
+	cmd.Flags().StringP("log-level", "l", "info", "The log level to use. One of: debug, info, warn, error, fatal")
+}
+
+func getLogger(cmd *cobra.Command) (*zap.SugaredLogger, error) {
+	cfg := zap.NewProductionConfig()
+	logLevel, err := cmd.Flags().GetString("log-level")
+	if err != nil {
+		return nil, err
+	}
+	cfg.Level.UnmarshalText([]byte(logLevel))
+	cfg.Encoding = "console"
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, err
+	}
+	defer logger.Sync() // flushes buffer, if any
+	sugar := logger.Sugar()
+	return sugar, nil
+}
+
 func syncCmd(cmd *cobra.Command, args []string) {
-	remoteFileStore, err := getRemoteFileStore()
+	logger, err := getLogger(cmd)
 	if err != nil {
 		panic(err)
 	}
+	remoteFileStore, err := getRemoteFileStore(logger)
+	if err != nil {
+		logger.Panic(err)
+	}
 	syncer := sync.Syncer{
 		RemoteFileStore: remoteFileStore,
-		LocalFileStore: &LocalFileStore{},
+		LocalFileStore:  &LocalFileStore{},
+		Logger:          logger,
 	}
 	if err = syncer.PerformSync(); err != nil {
-		panic(err)
+		logger.Panic(err)
 	}
 }
 
 func deleteRemoteFiles(cmd *cobra.Command, args []string) {
-	remoteFileStore, err := getRemoteFileStore()
+	logger, err := getLogger(cmd)
 	if err != nil {
 		panic(err)
 	}
+	remoteFileStore, err := getRemoteFileStore(logger)
+	if err != nil {
+		logger.Panic(err)
+	}
 	files, err := remoteFileStore.GetFiles()
 	if err != nil {
-		panic(err)
+		logger.Panic(err)
 	}
 	yes, _ := cmd.Flags().GetBool("yes")
 	if !yes {
@@ -62,11 +94,12 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 		}
 	}
 	if err = remoteFileStore.DeleteAllFiles(); err != nil {
-		panic(err)
+		logger.Panic(err)
 	}
+	logger.Infof("Deleted %d files", len(files))
 }
 
-func getRemoteFileStore() (utils.FileStore, error) {
+func getRemoteFileStore(logger utils.Logger) (utils.FileStore, error) {
 	encryptionKey, err := sync.GetEncryptionKey()
 	if err != nil {
 		return nil, err
@@ -76,6 +109,7 @@ func getRemoteFileStore() (utils.FileStore, error) {
 	}
 	return &DriveFileStore{
 		Encryptor: encryptor,
+		Logger:    logger,
 	}, nil
 }
 

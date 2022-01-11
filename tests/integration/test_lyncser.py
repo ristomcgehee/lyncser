@@ -2,7 +2,7 @@ from os import mkdir
 import os
 import subprocess
 import tempfile
-from typing import List
+from typing import List, Tuple
 
 config_dir_container = '/lyncser_config'
 data_dir_container = '/lyncser_data'
@@ -38,7 +38,7 @@ class LyncserClient(object):
             return f.read()
 
 
-def test_upload_download():
+def create_and_prep_clients(files_to_sync: List[str]) -> Tuple[LyncserClient, LyncserClient]:
     client1 = create_client()
     client2 = create_client()
     encryption_key = '166d8e96ae29d01dd155f840ac61657acfaa63bc24d15457183e9da03d33ef56'
@@ -46,15 +46,21 @@ def test_upload_download():
     client2.write_config_file('encryption.key', encryption_key)
     client1.run_lyncser(['deleteAllRemoteFiles', '-y'])
 
-    file1 = 'test1.txt'
-    file1_contents = 'test1'
-    client1.write_data_file(file1, file1_contents)
+    files_str = '\n    - '.join([ os.path.join(data_dir_container, file) for file in files_to_sync ])
     global_config = f"""paths:
   all:
-    - "{os.path.join(data_dir_container, file1)}"
+    - "{files_str}"
 """
     client1.write_config_file('globalConfig.yaml', global_config)
     client2.write_config_file('globalConfig.yaml', global_config)
+
+    return client1, client2
+
+def test_upload_download():
+    file1 = 'test1.txt'
+    client1, client2 = create_and_prep_clients([file1])
+    file1_contents = 'test1'
+    client1.write_data_file(file1, file1_contents)
     client1.run_lyncser(['sync'])
     client2.run_lyncser(['sync'])
 

@@ -16,6 +16,7 @@ import (
 type DriveFileStore struct {
 	// Used to encrypt files stored in Google Drive.
 	Encryptor utils.AESGCMEncryptor
+	Logger utils.Logger
 	service   *drive.Service
 	// Key is the file's friendly name. Value is Google Drive file id. Contains an entry for each file/directory
 	// in Google Drive that was created by lyncser.
@@ -214,6 +215,7 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	d.Logger.Debugf("Directory '%s' successfully created", dirName)
 	dirId = iface.(string)
 	d.mapPathToFileId[dirName] = dirId
 	return dirId, nil

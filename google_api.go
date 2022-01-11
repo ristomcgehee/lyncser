@@ -88,7 +88,6 @@ func saveToken(path string, token *oauth2.Token) error {
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
-		// log.Fatalf("Unable to cache oauth token: %v", err)
 	}
 	defer f.Close()
 	err = json.NewEncoder(f).Encode(token)
@@ -173,7 +172,6 @@ func createDir(service *drive.Service, name, parentId string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("Directory '%s' successfully created\n", name)
 	return file.Id, nil
 }
 

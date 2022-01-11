@@ -240,6 +240,16 @@ func addCommonSetup(suite *gobdd.Suite) {
 	suite.AddStep(`the remote state data should have file {filePath}`, remoteDataShouldHaveFile)
 }
 
+func getLogger(ctrl *gomock.Controller) *MockLogger {
+	logger := NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Panicf(gomock.Any(), gomock.Any()).AnyTimes()
+	return logger
+}
+
 func TestHandleFile(t *testing.T) {
 	syncedFile := SyncedFile{
 		FriendlyPath: "~/test_file1",
@@ -254,6 +264,7 @@ func TestHandleFile(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		syncer.RemoteFileStore = NewMockFileStore(ctrl)
 		syncer.LocalFileStore = NewMockFileStore(ctrl)
+		syncer.Logger = getLogger(ctrl)
 		syncer.stateData.FileStateData[syncedFile.FriendlyPath] = &LocalFileStateData{}
 		ctx.Set("syncer", syncer)
 		ctx.Set("syncedFile", syncedFile)
@@ -279,6 +290,7 @@ func TestCleanupRemoteFiles(t *testing.T) {
 		remoteFileStore := NewMockFileStore(ctrl)
 		syncer.RemoteFileStore = remoteFileStore
 		syncer.LocalFileStore = NewMockFileStore(ctrl)
+		syncer.Logger = getLogger(ctrl)
 		ctx.Set("syncer", syncer)
 		globalConfig = &GlobalConfig{
 			TagPaths: map[string][]string{
