@@ -21,6 +21,14 @@ new-tag:
 	git tag v0.1.11
 	git push --tags
 
-integration-tests: docker-build
+integration-tests: check-env docker-build
 	pip3 install pytest
 	pytest tests/integration/
+
+check-env:
+ifndef LYNCSER_CREDENTIALS
+	$(error LYNCSER_CREDENTIALS is undefined)
+endif
+ifndef LYNCSER_TOKEN
+	$(error LYNCSER_TOKEN is undefined)
+endif

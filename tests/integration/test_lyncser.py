@@ -1,5 +1,6 @@
 from os import mkdir
 import os
+import random
 import subprocess
 import tempfile
 from typing import List, Tuple
@@ -15,7 +16,12 @@ class LyncserClient(object):
         self.container_id = container_id
     
     def run_lyncser(self, args: List[str]):
-        subprocess.run(['docker', 'exec', self.container_id, 'lyncser'] + args, check=True)
+        subprocess.run([
+            'docker',
+            'exec', 
+            self.container_id, 
+            'lyncser'] + args + ['--log-level=debug'],
+        check=True)
     
     def write_data_file(self, filename: str, content: str):
         data_file_path = os.path.join(self.data_dir_host, filename)
@@ -57,7 +63,7 @@ def create_and_prep_clients(files_to_sync: List[str]) -> Tuple[LyncserClient, Ly
     return client1, client2
 
 def test_upload_download():
-    file1 = 'test1.txt'
+    file1 = f'test{random.randrange(0, 100000)}.txt'
     client1, client2 = create_and_prep_clients([file1])
     file1_contents = 'test1'
     client1.write_data_file(file1, file1_contents)

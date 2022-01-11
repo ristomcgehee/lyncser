@@ -45,6 +45,7 @@ func (d *DriveFileStore) GetFiles() ([]utils.StoredFile, error) {
 		return nil, err
 	}
 	fileList := iface.([]*drive.File)
+	d.Logger.Debugf("Found %d files in Google Drive", len(fileList))
 
 	// Populate d.mapIdToFile and storedFiles with the files we got from the cloud.
 	d.mapIdToFile = make(map[string]*drive.File)
