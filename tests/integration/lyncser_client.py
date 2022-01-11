@@ -53,7 +53,7 @@ def set_global_config(files_to_sync: List[str], client: LyncserClient):
     files_str = '\n    - '.join([ os.path.join(data_dir_container, file) for file in files_to_sync ])
     global_config = f"""paths:
   all:
-    - "{files_str}"
+    - {files_str}
 """
     client.write_config_file('globalConfig.yaml', global_config)
 
