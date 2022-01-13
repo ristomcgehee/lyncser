@@ -158,29 +158,53 @@ func (s *Syncer) handleFile(fileName string, isRemoteDir bool) error {
 	if err != nil {
 		return err
 	}
-	if fileExistsRemotely {
-		if err = s.syncExistingFile(file, fileExistsLocally); err != nil {
-			return err
-		}
-	} else {
-		if !fileExistsLocally {
-			s.Logger.Warnf("File '%s' does not exist locally or remotely", file.FriendlyPath) // ¯\_(ツ)_/¯
-			return nil
-		}
-		if err = s.uploadFile(file); err != nil {
-			return err
-		}
-		s.Logger.Infof("File '%s' successfully uploaded", file.FriendlyPath)
+	if !fileExistsRemotely && !fileExistsLocally {
+		s.Logger.Warnf("File '%s' does not exist locally or remotely", file.FriendlyPath) // ¯\_(ツ)_/¯
+		return nil
+	}
+	if err = s.syncFile(file, fileExistsLocally, fileExistsRemotely); err != nil {
+		return err
 	}
 	s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
 	return nil
 }
 
-// syncExistingFile uploads/downloads the file as necessary
-func (s *Syncer) syncExistingFile(file SyncedFile, fileExistsLocally bool) error {
-	modTimeCloud, err := s.RemoteFileStore.GetModifiedTime(file.FriendlyPath)
-	if err != nil {
-		return err
+// Returns true if the file should be uploaded.
+func doUploadFile(fileExistsLocally, fileExistsRemotely bool, modTimeLocal, modTimeCloud, lastCloudUpdate time.Time) bool {
+	if !fileExistsRemotely {
+		return true
+	}
+	if !fileExistsLocally {
+		return false
+	}
+	return modTimeLocal.After(modTimeCloud) && utils.HasBeenSynced(lastCloudUpdate) && modTimeLocal.After(lastCloudUpdate)
+}
+
+// Returns true if the file should be downloaded.
+func doDownloadFile(fileExistsLocally, isRemoteDir bool, modTimeLocal, modTimeCloud, lastCloudUpdate time.Time) bool {
+	if isRemoteDir {
+		return false
+	}
+	if !fileExistsLocally && !utils.HasBeenSynced(lastCloudUpdate) {
+		return true
+	}
+	return fileExistsLocally && modTimeCloud.After(modTimeLocal) && lastCloudUpdate.Before(modTimeCloud)
+}
+
+// Returns true if the files should be marked as deleted.
+func doMarkDeleted(fileExistsLocally bool, lastCloudUpdate time.Time) bool {
+	return !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
+}
+
+// syncFile uploads/downloads the file as necessary
+func (s *Syncer) syncFile(file SyncedFile, fileExistsLocally, fileExistsRemotely bool) error {
+	var err error
+	var modTimeCloud time.Time
+	if fileExistsRemotely {
+		modTimeCloud, err = s.RemoteFileStore.GetModifiedTime(file.FriendlyPath)
+		if err != nil {
+			return err
+		}
 	}
 	var modTimeLocal time.Time
 	if fileExistsLocally {
@@ -192,11 +216,9 @@ func (s *Syncer) syncExistingFile(file SyncedFile, fileExistsLocally bool) error
 	}
 	lastCloudUpdate := s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
 
-	uploadFile := fileExistsLocally && modTimeLocal.After(modTimeCloud) &&
-		utils.HasBeenSynced(lastCloudUpdate) && modTimeLocal.After(lastCloudUpdate)
-	downloadFile := (!fileExistsLocally && !utils.HasBeenSynced(lastCloudUpdate) && !file.IsRemoteDir) ||
-		(fileExistsLocally && modTimeCloud.After(modTimeLocal) && lastCloudUpdate.Before(modTimeCloud))
-	markDeleted := !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
+	uploadFile := doUploadFile(fileExistsLocally, fileExistsRemotely, modTimeLocal, modTimeCloud, lastCloudUpdate)
+	downloadFile := doDownloadFile(fileExistsLocally, file.IsRemoteDir, modTimeLocal, modTimeCloud, lastCloudUpdate)
+	markDeleted := doMarkDeleted(fileExistsLocally, lastCloudUpdate)
 
 	if uploadFile {
 		if err = s.uploadFile(file); err != nil {
