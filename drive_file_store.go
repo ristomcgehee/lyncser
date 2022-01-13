@@ -28,7 +28,7 @@ type DriveFileStore struct {
 	lyncserRootId string
 }
 
-func (d *DriveFileStore) GetFiles() ([]utils.StoredFile, error) {
+func (d *DriveFileStore) GetFiles() ([]*utils.StoredFile, error) {
 	// This is the name of the top-level folder where all files created by lyncser will be stored.
 	const lyncserRootName = "Lyncser-Root"
 	var err error
@@ -66,6 +66,7 @@ func (d *DriveFileStore) GetFiles() ([]utils.StoredFile, error) {
 			return nil, err
 		}
 		d.lyncserRootId = iface.(string)
+		d.Logger.Debugf("New %s with id %s created", lyncserRootName, d.lyncserRootId)
 	}
 
 	// Populate d.mapPathToFileId with the files that we can trace back to d.lyncserRootId
@@ -89,14 +90,18 @@ func (d *DriveFileStore) GetFiles() ([]utils.StoredFile, error) {
 			parentId = parentDir.Parents[0]
 		}
 		if foundParent {
+			if !strings.HasPrefix(path, "~/") {
+				// When stored in Google Drive, file names do not start with '/'. We make up for that here.
+				path = "/" + path
+			}
 			d.mapPathToFileId[path] = id
 		}
 	}
 
-	storedFiles := make([]utils.StoredFile, 0, len(d.mapPathToFileId))
+	storedFiles := make([]*utils.StoredFile, 0, len(d.mapPathToFileId))
 	for path, fileId := range d.mapPathToFileId {
 		file := d.mapIdToFile[fileId]
-		storedFiles = append(storedFiles, utils.StoredFile{
+		storedFiles = append(storedFiles, &utils.StoredFile{
 			Path:  path,
 			IsDir: file.MimeType == mimeTypeFolder,
 		})
@@ -181,10 +186,6 @@ func (d *DriveFileStore) FileExists(path string) (bool, error) {
 // getFiledId returns the Google Drive file id for the given path if it exists, otherwise it returns false for
 // the second return value.
 func (d *DriveFileStore) getFiledId(path string) (string, bool) {
-	// When stored in Google Drive, file names do not start with '/'.
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
-	}
 	fileId, ok := d.mapPathToFileId[path]
 	return fileId, ok
 }

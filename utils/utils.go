@@ -36,7 +36,7 @@ func PathExists(path string) (bool, error) {
 
 // Remove returns a slice with the first item that satisfies f removed. Order is retained. This can be an expensive
 // operation if there are many items in slice.
-func Remove(f func(item string) bool, slice []string) []string {
+func Remove(f func(item StoredFile) bool, slice []StoredFile) []StoredFile {
 	for i, item := range slice {
 		if f(item) {
 			return append(slice[:i], slice[i+1:]...)

@@ -95,10 +95,10 @@ func (mr *MockFileStoreMockRecorder) GetFileContents(path interface{}) *gomock.C
 }
 
 // GetFiles mocks base method.
-func (m *MockFileStore) GetFiles() ([]utils.StoredFile, error) {
+func (m *MockFileStore) GetFiles() ([]*utils.StoredFile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFiles")
-	ret0, _ := ret[0].([]utils.StoredFile)
+	ret0, _ := ret[0].([]*utils.StoredFile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

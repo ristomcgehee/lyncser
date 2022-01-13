@@ -14,6 +14,7 @@ import (
 type SyncedFile struct {
 	FriendlyPath string
 	RealPath     string
+	IsRemoteDir  bool
 }
 
 type Syncer struct {
@@ -67,12 +68,22 @@ func (s *Syncer) PerformSync() error {
 					return nil
 				}
 				path = strings.Replace(path, realPath, pathToSync, 1)
-				if err = s.handleFile(path); err != nil {
+				var remoteFile *utils.StoredFile
+				idxRemoteFile := -1
+				for i, remoteFileToHandle := range remoteFilesToHandle {
+					if remoteFileToHandle.Path == path {
+						remoteFile = remoteFileToHandle
+						idxRemoteFile = i
+						break
+					}
+				}
+				isRemoteDir := remoteFile != nil && remoteFile.IsDir
+				if err = s.handleFile(path, isRemoteDir); err != nil {
 					s.Logger.Errorf("Error syncing file '%s': %v", path, err)
 				}
-				remoteFilesToHandle = utils.Remove(func(item string) bool {
-					return item == path
-				}, remoteFilesToHandle)
+				if remoteFile != nil {
+					remoteFilesToHandle = append(remoteFilesToHandle[:idxRemoteFile], remoteFilesToHandle[idxRemoteFile+1:]...)
+				}
 				return nil
 			})
 			if err != nil {
@@ -81,14 +92,14 @@ func (s *Syncer) PerformSync() error {
 
 			// For any files that were not found locally, we'll download them now.
 			for _, remoteFile := range remoteFilesToHandle {
-				if err = s.handleFile(remoteFile); err != nil {
+				if err = s.handleFile(remoteFile.Path, remoteFile.IsDir); err != nil {
 					s.Logger.Errorf("Error syncing remote file '%s': %v", remoteFile, err)
 				}
 			}
 		}
 	}
 	// globalConfigPath gets uploaded even if it's not explicitly listed
-	if err = s.handleFile(globalConfigPath); err != nil {
+	if err = s.handleFile(globalConfigPath, false); err != nil {
 		s.Logger.Errorf("Error syncing file '%s': %v", globalConfigPath, err)
 	}
 
@@ -100,8 +111,8 @@ func (s *Syncer) PerformSync() error {
 }
 
 // Get all the remote files that start with pathToSync if it is a directory.
-func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []utils.StoredFile) []string {
-	remoteFilesToHandle := make([]string, 0)
+func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []*utils.StoredFile) []*utils.StoredFile {
+	remoteFilesToHandle := make([]*utils.StoredFile, 0)
 	stat, _ := os.Stat(realPath)
 	if stat != nil && !stat.IsDir() {
 		return remoteFilesToHandle
@@ -110,13 +121,13 @@ func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []utils.Sto
 		if remoteFile.IsDir || !strings.HasPrefix(remoteFile.Path, pathToSync) {
 			continue
 		}
-		remoteFilesToHandle = append(remoteFilesToHandle, remoteFile.Path)
+		remoteFilesToHandle = append(remoteFilesToHandle, remoteFile)
 	}
 	return remoteFilesToHandle
 }
 
 // Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
-func (s *Syncer) handleFile(fileName string) error {
+func (s *Syncer) handleFile(fileName string, isRemoteDir bool) error {
 	realPath, err := utils.RealPath(fileName)
 	if err != nil {
 		return err
@@ -124,13 +135,14 @@ func (s *Syncer) handleFile(fileName string) error {
 	file := SyncedFile{
 		FriendlyPath: fileName,
 		RealPath:     realPath,
+		IsRemoteDir:  isRemoteDir,
 	}
 	fileExistsLocally, err := s.LocalFileStore.FileExists(file.RealPath)
 	if err != nil {
 		return err
 	}
-	if _, ok := s.stateData.FileStateData[fileName]; !ok {
-		s.stateData.FileStateData[fileName] = &LocalFileStateData{
+	if _, ok := s.stateData.FileStateData[file.FriendlyPath]; !ok {
+		s.stateData.FileStateData[file.FriendlyPath] = &LocalFileStateData{
 			LastCloudUpdate: utils.GetNeverSynced(),
 		}
 	}
@@ -182,7 +194,7 @@ func (s *Syncer) syncExistingFile(file SyncedFile, fileExistsLocally bool) error
 
 	uploadFile := fileExistsLocally && modTimeLocal.After(modTimeCloud) &&
 		utils.HasBeenSynced(lastCloudUpdate) && modTimeLocal.After(lastCloudUpdate)
-	downloadFile := (!fileExistsLocally && !utils.HasBeenSynced(lastCloudUpdate)) ||
+	downloadFile := (!fileExistsLocally && !utils.HasBeenSynced(lastCloudUpdate) && !file.IsRemoteDir) ||
 		(fileExistsLocally && modTimeCloud.After(modTimeLocal) && lastCloudUpdate.Before(modTimeCloud))
 	markDeleted := !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
 
@@ -229,7 +241,7 @@ func (s *Syncer) downloadFile(file SyncedFile) error {
 	return nil
 }
 
-func (s *Syncer) cleanupRemoteFiles(remoteFiles []utils.StoredFile, globalConfig *GlobalConfig) (*RemoteStateData, error) {
+func (s *Syncer) cleanupRemoteFiles(remoteFiles []*utils.StoredFile, globalConfig *GlobalConfig) (*RemoteStateData, error) {
 	remoteStateData, err := getRemoteStateData(s.RemoteFileStore)
 	if err != nil {
 		return remoteStateData, err

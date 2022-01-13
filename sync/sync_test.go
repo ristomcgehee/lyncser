@@ -63,7 +63,7 @@ type assertExpectationFunc func(t gobdd.StepTest, ctx gobdd.Context)
 var (
 	expectations = []assertExpectationFunc{}
 	globalConfig = &GlobalConfig{}
-	remoteFiles  = []utils.StoredFile{}
+	remoteFiles  = []*utils.StoredFile{}
 )
 
 func addExpectation(t gobdd.StepTest, ctx gobdd.Context, expectation assertExpectationFunc) {
@@ -137,7 +137,7 @@ func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 }
 
 func cloudHasFile(t gobdd.StepTest, ctx gobdd.Context, filePath string) {
-	remoteFiles = append(remoteFiles, utils.StoredFile{
+	remoteFiles = append(remoteFiles, &utils.StoredFile{
 		Path: filePath,
 	})
 }
@@ -270,7 +270,7 @@ func TestHandleFile(t *testing.T) {
 		ctx.Set("syncedFile", syncedFile)
 		expectations = []assertExpectationFunc{}
 	}), gobdd.WithAfterScenario(func(ctx gobdd.Context) {
-		syncer.handleFile(syncedFile.FriendlyPath)
+		syncer.handleFile(syncedFile.FriendlyPath, false)
 		for _, assertExpectation := range expectations {
 			assertExpectation(t, ctx)
 		}
@@ -297,7 +297,7 @@ func TestCleanupRemoteFiles(t *testing.T) {
 				"all": {},
 			},
 		}
-		remoteFiles = []utils.StoredFile{}
+		remoteFiles = []*utils.StoredFile{}
 		remoteFileStore.EXPECT().
 			WriteFileContents(gomock.Eq(stateRemoteFilePath), gomock.Any())
 		expectations = []assertExpectationFunc{}

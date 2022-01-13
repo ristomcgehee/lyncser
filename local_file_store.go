@@ -12,7 +12,7 @@ import (
 // For accessing local files.
 type LocalFileStore struct{}
 
-func (l *LocalFileStore) GetFiles() ([]utils.StoredFile, error) {
+func (l *LocalFileStore) GetFiles() ([]*utils.StoredFile, error) {
 	panic("not implemented")
 }
 
