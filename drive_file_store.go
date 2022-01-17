@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -14,8 +13,8 @@ import (
 
 // File store that uses Google Drive.
 type DriveFileStore struct {
-	Logger utils.Logger
-	service   *drive.Service
+	Logger  utils.Logger
+	service *drive.Service
 	// Key is the file's friendly name. Value is Google Drive file id. Contains an entry for each file/directory
 	// in Google Drive that was created by lyncser.
 	mapPathToFileId map[string]string
@@ -35,14 +34,10 @@ func (d *DriveFileStore) GetFiles() ([]*utils.StoredFile, error) {
 		return nil, err
 	}
 	d.lyncserRootId = ""
-	iface, err := makeApiCall(func() (interface{}, error) {
-		fl, err := getFileList(d.service)
-		return interface{}(fl), err
-	}, d)
+	fileList, err := getFileList(d.service)
 	if err != nil {
 		return nil, err
 	}
-	fileList := iface.([]*drive.File)
 	d.Logger.Debugf("Found %d files in Google Drive", len(fileList))
 
 	// Populate d.mapIdToFile and storedFiles with the files we got from the cloud.
@@ -56,14 +51,10 @@ func (d *DriveFileStore) GetFiles() ([]*utils.StoredFile, error) {
 	}
 
 	if d.lyncserRootId == "" {
-		iface, err = makeApiCall(func() (interface{}, error) {
-			s, err := createDir(d.service, lyncserRootName, "")
-			return interface{}(s), err
-		}, d)
+		d.lyncserRootId, err = createDir(d.service, lyncserRootName, "")
 		if err != nil {
 			return nil, err
 		}
-		d.lyncserRootId = iface.(string)
 		d.Logger.Debugf("New %s with id %s created", lyncserRootName, d.lyncserRootId)
 	}
 
@@ -109,16 +100,7 @@ func (d *DriveFileStore) GetFiles() ([]*utils.StoredFile, error) {
 
 func (d *DriveFileStore) GetFileContents(path string) (io.ReadCloser, error) {
 	fileId, _ := d.getFiledId(path)
-	iface, err := makeApiCall(func() (interface{}, error) {
-		r, err := downloadFileContents(d.service, fileId)
-		return interface{}(r), err
-	}, d)
-	if err != nil {
-		return nil, err
-	}
-	contentsReader := iface.(io.ReadCloser)
-
-	return contentsReader, nil
+	return downloadFileContents(d.service, fileId)
 }
 
 func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
@@ -138,10 +120,7 @@ func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error 
 		return nil
 	}
 	driveFile := d.mapIdToFile[fileId]
-	_, err := makeApiCall(func() (interface{}, error) {
-		f, err := updateFileContents(d.service, driveFile, fileId, reader)
-		return interface{}(f), err
-	}, d)
+	_, err := updateFileContents(d.service, driveFile, fileId, reader)
 	return err
 }
 
@@ -150,19 +129,11 @@ func (d *DriveFileStore) DeleteFile(file string) error {
 	if !exists {
 		return nil
 	}
-	_, err := makeApiCall(func() (interface{}, error) {
-		err := deleteFile(d.service, fileId)
-		return nil, err
-	}, d)
-	return err
+	return deleteFile(d.service, fileId)
 }
 
 func (d *DriveFileStore) DeleteAllFiles() error {
-	_, err := makeApiCall(func() (interface{}, error) {
-		err := deleteFile(d.service, d.lyncserRootId)
-		return nil, err
-	}, d)
-	return err
+	return deleteFile(d.service, d.lyncserRootId)
 }
 
 func (d *DriveFileStore) FileExists(path string) (bool, error) {
@@ -197,15 +168,11 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
 			return "", err
 		}
 	}
-	iface, err := makeApiCall(func() (interface{}, error) {
-		s, err := createDir(d.service, dirName, parentId)
-		return interface{}(s), err
-	}, d)
+	dirId, err = createDir(d.service, dirName, parentId)
 	if err != nil {
 		return "", err
 	}
 	d.Logger.Debugf("Directory '%s' successfully created", dirName)
-	dirId = iface.(string)
 	d.mapPathToFileId[dirName] = dirId
 	return dirId, nil
 }
@@ -216,53 +183,11 @@ func (d *DriveFileStore) createFile(path string, reader io.Reader) error {
 		return err
 	}
 	baseName := filepath.Base(path)
-	iface, err := makeApiCall(func() (interface{}, error) {
-		f, err := createFile(d.service, baseName, "text/plain", reader, dirId)
-		return interface{}(f), err
-	}, d)
+	driveFile, err := createFile(d.service, baseName, "text/plain", reader, dirId)
 	if err != nil {
 		return err
 	}
-	driveFile := iface.(*drive.File)
 	d.mapPathToFileId[path] = driveFile.Id
 	d.mapIdToFile[driveFile.Id] = driveFile
 	return nil
 }
-
-// Attempts an API call, and if it fails due to invalid token, will obtain a new one and try the API call again.
-func makeApiCall(f func() (interface{}, error), d *DriveFileStore) (interface{}, error) {
-	retval, err := f()
-	if err != nil {
-		isTokenInvalid, err := isTokenInvalid(err)
-		if err != nil {
-			return nil, err
-		}
-		if isTokenInvalid {
-			fmt.Println("Token is no longer valid. Requesting new one..")
-			d.service, err = getService(true)
-			if err != nil {
-				return nil, err
-			}
-		}
-		retval, err = f()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return retval, err
-}
-
-// To be re-introduced in Go 1.18.
-// // Attempts an API call, and if it fails due to invalid token, will obtain a new one and try the API call again.
-// func makeApiCall[T any](f func() (T, error), d *DriveFileStore) T {
-// 	retval, err := f()
-// 	if err != nil {
-// 		if isTokenInvalid(err) {
-// 			fmt.Println("Token is no longer valid. Requesting new one..")
-// 			d.service = getService(true)
-// 		}
-// 		retval, err = f()
-// 		utils.PanicError(err)
-// 	}
-// 	return retval
-// }
