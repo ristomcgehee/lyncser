@@ -1,0 +1,27 @@
+name: tests
+on:
+  push:
+    branches: [ main ]
+  pull_request_target:
+    branches: [ main ]
+    types: [labeled]
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    # Because this workflow has access to secrets, we only allow it to be run when the 'safe to test' label has been
+    # added to the PR (or if it's a push).
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'safe to test') || github.event_name == 'push' }}
+    steps:
+      - name: Checkout code pull request
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout code push
+        if: github.event_name == 'push'
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+      - name: Run tests 
+        run: make integration-tests
+        env:
+          LYNCSER_CREDENTIALS: ${{ secrets.LYNCSER_CREDENTIALS }}
+          LYNCSER_TOKEN: ${{ secrets.LYNCSER_TOKEN }}

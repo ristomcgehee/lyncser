@@ -260,7 +260,11 @@ func getLogger(ctrl *gomock.Controller) *mocks.MockLogger {
 func TestHandleFile(t *testing.T) {
 	syncedFile := SyncedFile{
 		FriendlyPath: "~/test_file1",
-		RealPath:     "/home/chris/test_file1",
+	}
+	var err error
+	syncedFile.RealPath, err = utils.RealPath(syncedFile.FriendlyPath)
+	if err != nil {
+		t.Fatal(err)
 	}
 	syncer := &Syncer{
 		stateData: &LocalStateData{
