@@ -1,4 +1,4 @@
-package main
+package file_store
 
 import (
 	"io"
@@ -25,7 +25,7 @@ type DriveFileStore struct {
 	lyncserRootId string
 }
 
-func (d *DriveFileStore) GetFiles() ([]*utils.StoredFile, error) {
+func (d *DriveFileStore) GetFiles() ([]*StoredFile, error) {
 	// This is the name of the top-level folder where all files created by lyncser will be stored.
 	const lyncserRootName = "Lyncser-Root"
 	var err error
@@ -87,10 +87,10 @@ func (d *DriveFileStore) GetFiles() ([]*utils.StoredFile, error) {
 		}
 	}
 
-	storedFiles := make([]*utils.StoredFile, 0, len(d.mapPathToFileId))
+	storedFiles := make([]*StoredFile, 0, len(d.mapPathToFileId))
 	for path, fileId := range d.mapPathToFileId {
 		file := d.mapIdToFile[fileId]
-		storedFiles = append(storedFiles, &utils.StoredFile{
+		storedFiles = append(storedFiles, &StoredFile{
 			Path:  path,
 			IsDir: file.MimeType == mimeTypeFolder,
 		})

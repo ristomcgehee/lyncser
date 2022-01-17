@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/chrismcgehee/lyncser/file_store"
 	"github.com/chrismcgehee/lyncser/sync"
 	"github.com/chrismcgehee/lyncser/utils"
 	"github.com/spf13/cobra"
@@ -70,7 +71,7 @@ func syncCmd(cmd *cobra.Command, args []string) {
 	}
 	syncer := sync.Syncer{
 		RemoteFileStore: remoteFileStore,
-		LocalFileStore:  &LocalFileStore{},
+		LocalFileStore:  &file_store.LocalFileStore{},
 		Logger:          logger,
 		Encryptor:       encryptor,
 	}
@@ -107,9 +108,9 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 	logger.Infof("Deleted %d files", len(files))
 }
 
-func getRemoteFileStore(logger utils.Logger) (utils.FileStore, error) {
-	return &DriveFileStore{
-		Logger:    logger,
+func getRemoteFileStore(logger utils.Logger) (file_store.FileStore, error) {
+	return &file_store.DriveFileStore{
+		Logger: logger,
 	}, nil
 }
 
