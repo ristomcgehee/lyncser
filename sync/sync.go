@@ -21,7 +21,9 @@ type Syncer struct {
 	RemoteFileStore utils.FileStore
 	LocalFileStore  utils.FileStore
 	Logger          utils.Logger
-	stateData       *LocalStateData
+	// Used to encrypt files stored in the remote file store.
+	Encryptor utils.ReaderEncryptor
+	stateData *LocalStateData
 }
 
 // PerformSync does the entire sync from end to end.
@@ -243,7 +245,11 @@ func (s *Syncer) uploadFile(file SyncedFile) error {
 		return err
 	}
 	defer contentReader.Close()
-	err = s.RemoteFileStore.WriteFileContents(file.FriendlyPath, contentReader)
+	readerEncrypted, err := s.Encryptor.EncryptReader(contentReader)
+	if err != nil {
+		return err
+	}
+	err = s.RemoteFileStore.WriteFileContents(file.FriendlyPath, readerEncrypted)
 	if err != nil {
 		return err
 	}
@@ -256,7 +262,12 @@ func (s *Syncer) downloadFile(file SyncedFile) error {
 		return err
 	}
 	defer contentReader.Close()
-	err = s.LocalFileStore.WriteFileContents(file.RealPath, contentReader)
+	decryptedReader, err := s.Encryptor.DecryptReader(contentReader)
+	if err != nil {
+		return err
+	}
+
+	err = s.LocalFileStore.WriteFileContents(file.RealPath, decryptedReader)
 	if err != nil {
 		return err
 	}

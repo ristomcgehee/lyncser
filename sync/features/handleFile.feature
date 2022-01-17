@@ -6,14 +6,14 @@ Feature: Syncing files at appropriate times
     And the file exists locally
     And the local modified time is "9 am"
     And the last cloud update was "8 am"
-    Then the file should be updated to the cloud
+    Then the file should be uploaded to the cloud
 
   Scenario: uploading new file to cloud
     When the file does not exist in the cloud
     And the file exists locally
     And the local modified time is "7 am"
     And the last cloud update was "never"
-    Then the file should be created in the cloud
+    Then the file should be uploaded to the cloud
 
   Scenario: file doesn't exist anywhere
     When the file does not exist in the cloud
@@ -74,7 +74,7 @@ Feature: Syncing files at appropriate times
     And the file exists locally
     And the local modified time is "9:01 am"
     And the last cloud update was "9 am"
-    Then the file should be updated to the cloud
+    Then the file should be uploaded to the cloud
 
   Scenario: mark file deleted when it exists in the cloud but not locally
     When the file exists in the cloud

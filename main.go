@@ -61,10 +61,18 @@ func syncCmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Panic(err)
 	}
+	encryptionKey, err := sync.GetEncryptionKey()
+	if err != nil {
+		logger.Panic(err)
+	}
+	encryptor := &utils.AESGCMEncryptor{
+		Key: encryptionKey,
+	}
 	syncer := sync.Syncer{
 		RemoteFileStore: remoteFileStore,
 		LocalFileStore:  &LocalFileStore{},
 		Logger:          logger,
+		Encryptor:       encryptor,
 	}
 	if err = syncer.PerformSync(); err != nil {
 		logger.Panic(err)
@@ -100,15 +108,7 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 }
 
 func getRemoteFileStore(logger utils.Logger) (utils.FileStore, error) {
-	encryptionKey, err := sync.GetEncryptionKey()
-	if err != nil {
-		return nil, err
-	}
-	encryptor := utils.AESGCMEncryptor{
-		Key: encryptionKey,
-	}
 	return &DriveFileStore{
-		Encryptor: encryptor,
 		Logger:    logger,
 	}, nil
 }
