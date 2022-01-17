@@ -67,6 +67,14 @@ class LyncserClient(object):
             'rm',
             f'{data_dir_container}/{filename}'],
         check=True)
+    
+    def cleanup(self) -> None:
+        subprocess.run([
+            'docker',
+            'rm',
+            self.container_id,
+            '--force'
+        ])
 
     def _write_file(self, filename: str, content: str) -> None:
         with tempfile.NamedTemporaryFile(mode='w+') as f:
@@ -123,3 +131,6 @@ def create_client() -> LyncserClient:
 
     return client
 
+def cleanup_clients(clients: List[LyncserClient]) -> None:
+    for client in clients:
+        client.cleanup()

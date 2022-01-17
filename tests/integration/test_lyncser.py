@@ -1,6 +1,6 @@
 import random
 
-from .lyncser_client import create_and_prep_clients, LyncserClient
+from .lyncser_client import create_and_prep_clients, LyncserClient, cleanup_clients
 
 
 def test_lot_of_stuff():
@@ -76,6 +76,9 @@ def test_lot_of_stuff():
     assert client3.get_data_file_content(file2) == file2_contents_client1
 
     _test_directory_stuff(client1, client2)
+
+    # Only run cleanup if tests passed so we can examine the docker containers after failures.
+    cleanup_clients([client1, client2, client3])
 
 def _test_directory_stuff(client1: LyncserClient, client2: LyncserClient) -> None:
     # Sync a directory
