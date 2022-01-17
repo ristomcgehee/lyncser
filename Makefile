@@ -14,7 +14,7 @@ mocks:
 	mockgen -source=utils/reader_encryptor.go -package=mocks > sync/mocks/mock_reader_encryptor.go
 
 docker-build:
-	docker build -t lyncser-test .
+	docker build -t lyncser-test --file tests/integration/Dockerfile .
 
 new-tag:
 	# Update the tag number manually
