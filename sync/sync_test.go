@@ -10,6 +10,7 @@ import (
 	"github.com/go-bdd/gobdd"
 	"github.com/golang/mock/gomock"
 
+	"github.com/chrismcgehee/lyncser/sync/mocks"
 	"github.com/chrismcgehee/lyncser/utils"
 )
 
@@ -74,7 +75,7 @@ func addExpectation(t gobdd.StepTest, ctx gobdd.Context, expectation assertExpec
 
 func fileExistsLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
-	localFileStore := syncer.LocalFileStore.(*MockFileStore)
+	localFileStore := syncer.LocalFileStore.(*mocks.MockFileStore)
 	localFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile.RealPath)).
 		Return(true, nil).AnyTimes()
@@ -82,7 +83,7 @@ func fileExistsLocally(t gobdd.StepTest, ctx gobdd.Context) {
 
 func fileDoesntExistLocally(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
-	localFileStore := syncer.LocalFileStore.(*MockFileStore)
+	localFileStore := syncer.LocalFileStore.(*mocks.MockFileStore)
 	localFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile.RealPath)).
 		Return(false, nil).AnyTimes()
@@ -90,7 +91,7 @@ func fileDoesntExistLocally(t gobdd.StepTest, ctx gobdd.Context) {
 
 func localModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
 	syncer, syncedFile := unwrapContext(ctx)
-	localFileStore := syncer.LocalFileStore.(*MockFileStore)
+	localFileStore := syncer.LocalFileStore.(*mocks.MockFileStore)
 	localFileStore.EXPECT().
 		GetModifiedTime(gomock.Eq(syncedFile.RealPath)).
 		Return(convertTime(modifiedTime), nil).AnyTimes()
@@ -114,7 +115,7 @@ func globalConfigHasFile(t gobdd.StepTest, ctx gobdd.Context, filePath string) {
 
 func fileExistsInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
-	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore := syncer.RemoteFileStore.(*mocks.MockFileStore)
 	cloudFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(true, nil).AnyTimes()
@@ -122,7 +123,7 @@ func fileExistsInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 
 func fileDoesntExistInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
-	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore := syncer.RemoteFileStore.(*mocks.MockFileStore)
 	cloudFileStore.EXPECT().
 		FileExists(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(false, nil).AnyTimes()
@@ -130,7 +131,7 @@ func fileDoesntExistInCloud(t gobdd.StepTest, ctx gobdd.Context) {
 
 func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string) {
 	syncer, syncedFile := unwrapContext(ctx)
-	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore := syncer.RemoteFileStore.(*mocks.MockFileStore)
 	cloudFileStore.EXPECT().
 		GetModifiedTime(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(convertTime(modifiedTime), nil).AnyTimes()
@@ -144,7 +145,7 @@ func cloudHasFile(t gobdd.StepTest, ctx gobdd.Context, filePath string) {
 
 func remoteStateDataFileDoesNotExist(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, _ := unwrapContext(ctx)
-	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore := syncer.RemoteFileStore.(*mocks.MockFileStore)
 	cloudFileStore.EXPECT().
 		FileExists(gomock.Eq(stateRemoteFilePath)).
 		Return(false, nil)
@@ -154,28 +155,28 @@ func remoteStateDataFileDoesNotExist(t gobdd.StepTest, ctx gobdd.Context) {
 
 func fileUploadedCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
-	localFileStore := syncer.LocalFileStore.(*MockFileStore)
+	localFileStore := syncer.LocalFileStore.(*mocks.MockFileStore)
 	localFileStore.EXPECT().
 		GetFileContents(gomock.Eq(syncedFile.RealPath)).
 		Return(io.NopCloser(strings.NewReader("string")), nil)
-	encryptor := syncer.Encryptor.(*MockReaderEncryptor)
+	encryptor := syncer.Encryptor.(*mocks.MockReaderEncryptor)
 	encryptor.EXPECT().
 		EncryptReader(gomock.Any())
-	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore := syncer.RemoteFileStore.(*mocks.MockFileStore)
 	cloudFileStore.EXPECT().
 		WriteFileContents(gomock.Eq(syncedFile.FriendlyPath), gomock.Any())
 }
 
 func fileDownloadedFromCloud(t gobdd.StepTest, ctx gobdd.Context) {
 	syncer, syncedFile := unwrapContext(ctx)
-	cloudFileStore := syncer.RemoteFileStore.(*MockFileStore)
+	cloudFileStore := syncer.RemoteFileStore.(*mocks.MockFileStore)
 	cloudFileStore.EXPECT().
 		GetFileContents(gomock.Eq(syncedFile.FriendlyPath)).
 		Return(io.NopCloser(strings.NewReader("string")), nil)
-	encryptor := syncer.Encryptor.(*MockReaderEncryptor)
+	encryptor := syncer.Encryptor.(*mocks.MockReaderEncryptor)
 	encryptor.EXPECT().
 		DecryptReader(gomock.Any())
-	localFileStore := syncer.LocalFileStore.(*MockFileStore)
+	localFileStore := syncer.LocalFileStore.(*mocks.MockFileStore)
 	localFileStore.EXPECT().
 		WriteFileContents(gomock.Eq(syncedFile.RealPath), gomock.Any())
 }
@@ -245,8 +246,8 @@ func addCommonSetup(suite *gobdd.Suite) {
 	suite.AddStep(`the remote state data should have file {filePath}`, remoteDataShouldHaveFile)
 }
 
-func getLogger(ctrl *gomock.Controller) *MockLogger {
-	logger := NewMockLogger(ctrl)
+func getLogger(ctrl *gomock.Controller) *mocks.MockLogger {
+	logger := mocks.NewMockLogger(ctrl)
 	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
@@ -267,9 +268,9 @@ func TestHandleFile(t *testing.T) {
 	}
 	suite := gobdd.NewSuite(t, gobdd.WithBeforeScenario(func(ctx gobdd.Context) {
 		ctrl := gomock.NewController(t)
-		syncer.RemoteFileStore = NewMockFileStore(ctrl)
-		syncer.LocalFileStore = NewMockFileStore(ctrl)
-		syncer.Encryptor = NewMockReaderEncryptor(ctrl)
+		syncer.RemoteFileStore = mocks.NewMockFileStore(ctrl)
+		syncer.LocalFileStore = mocks.NewMockFileStore(ctrl)
+		syncer.Encryptor = mocks.NewMockReaderEncryptor(ctrl)
 		syncer.Logger = getLogger(ctrl)
 		syncer.stateData.FileStateData[syncedFile.FriendlyPath] = &LocalFileStateData{}
 		ctx.Set("syncer", syncer)
@@ -293,10 +294,10 @@ func TestCleanupRemoteFiles(t *testing.T) {
 	}
 	suite := gobdd.NewSuite(t, gobdd.WithBeforeScenario(func(ctx gobdd.Context) {
 		ctrl := gomock.NewController(t)
-		remoteFileStore := NewMockFileStore(ctrl)
+		remoteFileStore := mocks.NewMockFileStore(ctrl)
 		syncer.RemoteFileStore = remoteFileStore
-		syncer.LocalFileStore = NewMockFileStore(ctrl)
-		syncer.Encryptor = NewMockReaderEncryptor(ctrl)
+		syncer.LocalFileStore = mocks.NewMockFileStore(ctrl)
+		syncer.Encryptor = mocks.NewMockReaderEncryptor(ctrl)
 		syncer.Logger = getLogger(ctrl)
 		ctx.Set("syncer", syncer)
 		globalConfig = &GlobalConfig{
