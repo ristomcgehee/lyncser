@@ -59,13 +59,11 @@ func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
 	var authCode string
 	if _, err := fmt.Scan(&authCode); err != nil {
 		return nil, err
-		// log.Fatalf("Unable to read authorization code: %v", err)
 	}
 
 	tok, err := config.Exchange(context.TODO(), authCode)
 	if err != nil {
 		return nil, err
-		// log.Fatalf("Unable to retrieve token from web: %v", err)
 	}
 	return tok, nil
 }
@@ -131,7 +129,7 @@ func isTokenInvalid(err error) (bool, error) {
 			ErrorDescription string `json:"error_description"`
 		}{}
 		if err := json.Unmarshal(oauthError.Body, &r); err != io.EOF {
-			return false, err
+			return false, fmt.Errorf("error unmarshalling OAuth token: %w", err)
 		}
 		return r.Error == "invalid_grant", nil
 	}
@@ -147,7 +145,7 @@ func getFileList(service *drive.Service) ([]*drive.File, error) {
 	for true {
 		driveFileList, err := listFilesCall.Do()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting file list from Google Drive: %w", err)
 		}
 		files = append(files, driveFileList.Files...)
 		if driveFileList.NextPageToken == "" {
@@ -170,7 +168,7 @@ func createDir(service *drive.Service, name, parentId string) (string, error) {
 
 	file, err := service.Files.Create(d).Do()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error creating directory in Google Drive: %w", err)
 	}
 	return file.Id, nil
 }
@@ -184,7 +182,7 @@ func createFile(service *drive.Service, name string, mimeType string, content io
 	}
 	file, err := service.Files.Create(f).Media(content).Do()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating file in Google Drive: %w", err)
 	}
 	return file, nil
 }
@@ -194,7 +192,7 @@ func downloadFileContents(service *drive.Service, fileId string) (io.ReadCloser,
 	fileGetCall := service.Files.Get(fileId)
 	resp, err := fileGetCall.Download()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error downloading file contents from Google Drive: %w", err)
 	}
 	return resp.Body, nil
 }
@@ -209,7 +207,7 @@ func updateFileContents(service *drive.Service, driveFile *drive.File, fileId st
 	fileUpdateCall.Media(r)
 	file, err := fileUpdateCall.Do()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error updating file contents from Google Drive: %w", err)
 	}
 	return file, nil
 }
@@ -218,7 +216,7 @@ func updateFileContents(service *drive.Service, driveFile *drive.File, fileId st
 func deleteFile(service *drive.Service, fileId string) error {
 	fileDeleteCall := service.Files.Delete(fileId)
 	if err := fileDeleteCall.Do(); err != nil {
-		return err
+		return fmt.Errorf("error deleting file from Google Drive: %w", err)
 	}
 	return nil
 }
