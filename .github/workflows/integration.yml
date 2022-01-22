@@ -23,5 +23,5 @@ jobs:
       - name: Run tests 
         run: make integration-tests
         env:
-          LYNCSER_CREDENTIALS: ${{ secrets.LYNCSER_CREDENTIALS }}
-          LYNCSER_TOKEN: ${{ secrets.LYNCSER_TOKEN }}
+          GCP_ACCOUNT_CREDENTIALS: ${{ secrets.GCP_ACCOUNT_CREDENTIALS }}
+          GCP_OAUTH_TOKEN: ${{ secrets.GCP_OAUTH_TOKEN }}

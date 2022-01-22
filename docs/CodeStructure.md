@@ -29,8 +29,8 @@ that unit tests do not need to actually touch the file system.
 ## tests/integration folder
 Integration tests are tests that test the application from end-to-end using a real Google Drive account. Because Go is a
 fairly low-level language, these tests are written in Python. In these tests, multiple clients are created, each in their
-own Docker container running the application. These tests require two environment variables to be set: LYNCSER_CREDENTIALS
-and LYNCSER_TOKEN. The former is the contents of a Google Cloud Platform service account credentials file. The latter is
+own Docker container running the application. These tests require two environment variables to be set: GCP_ACCOUNT_CREDENTIALS
+and GCP_OAUTH_TOKEN. The former is the contents of a Google Cloud Platform service account credentials file. The latter is
 the OAuth token generated when running lyncser and performing the authorization step (what is written to 
 ~/config/lyncser/token.json). If both those variables are set, you can run with:
 ```sh

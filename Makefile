@@ -26,9 +26,9 @@ integration-tests: check-env docker-build
 	pytest tests/integration/
 
 check-env:
-ifndef LYNCSER_CREDENTIALS
-	$(error LYNCSER_CREDENTIALS is undefined)
+ifndef GCP_ACCOUNT_CREDENTIALS
+	$(error GCP_ACCOUNT_CREDENTIALS is undefined)
 endif
-ifndef LYNCSER_TOKEN
-	$(error LYNCSER_TOKEN is undefined)
+ifndef GCP_OAUTH_TOKEN
+	$(error GCP_OAUTH_TOKEN is undefined)
 endif

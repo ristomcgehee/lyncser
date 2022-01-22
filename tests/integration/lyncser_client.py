@@ -124,8 +124,8 @@ def create_client() -> LyncserClient:
     subprocess.run(['docker', 'exec', container_id, 'bash', '-c', f'mkdir ~/.config && ln -s {config_dir_container} ~/.config/lyncser'])
 
     client = LyncserClient(container_id)
-    creds = os.environ.get('LYNCSER_CREDENTIALS')
-    token = os.environ.get('LYNCSER_TOKEN')
+    creds = os.environ.get('GCP_ACCOUNT_CREDENTIALS')
+    token = os.environ.get('GCP_OAUTH_TOKEN')
     client.write_config_file('credentials.json', creds)
     client.write_config_file('token.json', token)
 
