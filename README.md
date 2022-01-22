@@ -40,6 +40,3 @@ tags:
 ```
 
 If the install script was executed, `lyncser` will run every 5 minutes and perform syncing. You may also run `lyncser` (no arguments necessary) at any time to perform a sync.
-
-## Future Plans
-- Use something like OAuth PKCE so the program does not need to access the client secret.
