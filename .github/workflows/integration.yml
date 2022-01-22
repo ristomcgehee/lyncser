@@ -3,14 +3,11 @@ on:
   push:
     branches: [ main ]
   pull_request_target:
-    branches: [ main ]
-    types: [labeled]
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
-    # Because this workflow has access to secrets, we only allow it to be run when the 'safe to test' label has been
-    # added to the PR (or if it's a push).
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'safe to test') || github.event_name == 'push' }}
+    # This environment requires approval before running on pull requests so it's safe to access secrets.
+    environment: integration-testing
     steps:
       - name: Checkout code pull request
         if: github.event_name == 'pull_request_target'
