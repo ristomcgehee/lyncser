@@ -1,24 +1,38 @@
-name: tests
+name: integration-tests
+
 on:
   push:
     branches: [ main ]
   pull_request_target:
+
 jobs:
-  integration-tests:
+  # There are two different integration tests: one for pushes and one for pull requests. Because the code running
+  # in a pull_request_target workflow allows access to secrets, it will only run after approval. In order to be able
+  # to run the integration tests for pushes without approval, that job does not use an environment.
+  integration-tests-pr:
     runs-on: ubuntu-latest
     # This environment requires approval before running on pull requests so it's safe to access secrets.
     environment: integration-testing
+    if: ${{ github.event_name == 'pull_request_target' }}
     steps:
-      - name: Checkout code pull request
-        if: github.event_name == 'pull_request_target'
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Checkout code push
-        if: github.event_name == 'push'
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
-      - name: Run tests 
-        run: make integration-tests
-        env:
-          GCP_ACCOUNT_CREDENTIALS: ${{ secrets.GCP_ACCOUNT_CREDENTIALS }}
-          GCP_OAUTH_TOKEN: ${{ secrets.GCP_OAUTH_TOKEN }}
+    - name: Checkout code pull request
+      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+    - name: Run tests 
+      run: make integration-tests
+      env:
+        GCP_ACCOUNT_CREDENTIALS: ${{ secrets.GCP_ACCOUNT_CREDENTIALS }}
+        GCP_OAUTH_TOKEN: ${{ secrets.GCP_OAUTH_TOKEN }}
+
+  integration-tests-push:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+    - name: Run tests 
+      run: make integration-tests
+      env:
+        GCP_ACCOUNT_CREDENTIALS: ${{ secrets.GCP_ACCOUNT_CREDENTIALS }}
+        GCP_OAUTH_TOKEN: ${{ secrets.GCP_OAUTH_TOKEN }}
