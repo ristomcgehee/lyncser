@@ -123,7 +123,7 @@ func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []*file_sto
 		return remoteFilesToHandle
 	}
 	for _, remoteFile := range remoteFiles {
-		if remoteFile.IsDir || !strings.HasPrefix(remoteFile.Path, pathToSync) {
+		if !strings.HasPrefix(remoteFile.Path, pathToSync) {
 			continue
 		}
 		remoteFilesToHandle = append(remoteFilesToHandle, remoteFile)
