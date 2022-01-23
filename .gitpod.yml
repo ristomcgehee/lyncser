@@ -8,7 +8,7 @@ tasks:
         echo "$REAL_GCP_OAUTH_TOKEN" > $HOME/.config/lyncser/token.json; \
         echo "$REAL_ENCRYPTION_KEY" > $HOME/.config/lyncser/encryption.key; \
         ./lyncser sync; # download global config \
-        ./lyncser sync --force-download; # download rest of files \
+        ./lyncser sync --force-download; # dowload rest of files \
       fi
 vscode:
   extensions:

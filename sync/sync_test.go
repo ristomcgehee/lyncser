@@ -112,6 +112,11 @@ func globalConfigHasFile(t gobdd.StepTest, ctx gobdd.Context, filePath string) {
 	globalConfig.TagPaths["all"] = append(globalConfig.TagPaths["all"], filePath)
 }
 
+func forceDownload(t gobdd.StepTest, ctx gobdd.Context) {
+	syncer, _ := unwrapContext(ctx)
+	syncer.ForceDownload = true
+}
+
 // Remote file info ================================================================================
 
 func fileExistsInCloud(t gobdd.StepTest, ctx gobdd.Context) {
@@ -232,6 +237,7 @@ func addCommonSetup(suite *gobdd.Suite) {
 	suite.AddStep(`the last cloud update was {time}`, lastCloudUpdate)
 	suite.AddStep(`the file was marked deleted locally`, wasMarkedDeletedLocally)
 	suite.AddStep(`the global config has file {filePath}`, globalConfigHasFile)
+	suite.AddStep(`force download is true`, forceDownload)
 	// cloud file
 	suite.AddStep(`the file exists in the cloud`, fileExistsInCloud)
 	suite.AddStep(`the file does not exist in the cloud`, fileDoesntExistInCloud)

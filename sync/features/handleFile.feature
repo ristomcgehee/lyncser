@@ -89,3 +89,11 @@ Feature: Syncing files at appropriate times
     And the file does not exist locally
     And the file was marked deleted locally
     Then nothing should happen
+
+  Scenario: force download when the local modified time is after the cloud modified time
+    When the file exists in the cloud
+    And the cloud modified time is "7 am"
+    And the file exists locally
+    And the local modified time is "9 am"
+    And force download is true
+    Then the file should be downloaded from the cloud

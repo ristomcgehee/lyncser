@@ -24,7 +24,9 @@ type Syncer struct {
 	Logger          utils.Logger
 	// Used to encrypt files stored in the remote file store.
 	Encryptor utils.ReaderEncryptor
-	stateData *LocalStateData
+	// ForceDownload will download a file even if the local modified time is after the remote modified time.
+	ForceDownload bool
+	stateData     *LocalStateData
 }
 
 // PerformSync does the entire sync from end to end.
@@ -173,20 +175,26 @@ func (s *Syncer) handleFile(fileName string, isRemoteDir bool) error {
 }
 
 // Returns true if the file should be uploaded.
-func doUploadFile(fileExistsLocally, fileExistsRemotely bool, modTimeLocal, modTimeCloud, lastCloudUpdate time.Time) bool {
+func doUploadFile(fileExistsLocally, fileExistsRemotely bool, modTimeLocal, modTimeCloud,
+	lastCloudUpdate time.Time) bool {
 	if !fileExistsRemotely {
 		return true
 	}
 	if !fileExistsLocally {
 		return false
 	}
-	return modTimeLocal.After(modTimeCloud) && utils.HasBeenSynced(lastCloudUpdate) && modTimeLocal.After(lastCloudUpdate)
+	return modTimeLocal.After(modTimeCloud) && utils.HasBeenSynced(lastCloudUpdate) &&
+		modTimeLocal.After(lastCloudUpdate)
 }
 
 // Returns true if the file should be downloaded.
-func doDownloadFile(fileExistsLocally, isRemoteDir bool, modTimeLocal, modTimeCloud, lastCloudUpdate time.Time) bool {
+func doDownloadFile(fileExistsLocally, isRemoteDir, forceDownload bool, modTimeLocal, modTimeCloud,
+	lastCloudUpdate time.Time) bool {
 	if isRemoteDir {
 		return false
+	}
+	if forceDownload {
+		return true
 	}
 	if !fileExistsLocally && !utils.HasBeenSynced(lastCloudUpdate) {
 		return true
@@ -219,20 +227,21 @@ func (s *Syncer) syncFile(file SyncedFile, fileExistsLocally, fileExistsRemotely
 	}
 	lastCloudUpdate := s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate
 
+	downloadFile := doDownloadFile(fileExistsLocally, file.IsRemoteDir, s.ForceDownload, modTimeLocal, modTimeCloud,
+		lastCloudUpdate)
 	uploadFile := doUploadFile(fileExistsLocally, fileExistsRemotely, modTimeLocal, modTimeCloud, lastCloudUpdate)
-	downloadFile := doDownloadFile(fileExistsLocally, file.IsRemoteDir, modTimeLocal, modTimeCloud, lastCloudUpdate)
 	markDeleted := doMarkDeleted(fileExistsLocally, lastCloudUpdate)
 
-	if uploadFile {
-		if err = s.uploadFile(file); err != nil {
-			return err
-		}
-		s.Logger.Infof("File '%s' successfully uploaded", file.FriendlyPath)
-	} else if downloadFile {
+	if downloadFile {
 		if err = s.downloadFile(file); err != nil {
 			return err
 		}
 		s.Logger.Infof("File '%s' successfully downloaded", file.FriendlyPath)
+	} else if uploadFile {
+		if err = s.uploadFile(file); err != nil {
+			return err
+		}
+		s.Logger.Infof("File '%s' successfully uploaded", file.FriendlyPath)
 	} else if markDeleted {
 		// mark the file as deleted so it's not downloaded again
 		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = true

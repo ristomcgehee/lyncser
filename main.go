@@ -21,6 +21,7 @@ func init() {
 		Run:   syncCmd,
 	}
 	addCommonFlags(syncCmd)
+	syncCmd.Flags().BoolP("force-download", "f", false, "Forces download of all files")
 	rootCmd.AddCommand(syncCmd)
 	deleteFilesCmd := &cobra.Command{
 		Use:   "deleteAllRemoteFiles",
@@ -58,6 +59,7 @@ func syncCmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
+	forceDownload, _ := cmd.Flags().GetBool("force-download")
 	remoteFileStore, err := getRemoteFileStore(logger)
 	if err != nil {
 		logger.Panic(err)
@@ -74,6 +76,7 @@ func syncCmd(cmd *cobra.Command, args []string) {
 		LocalFileStore:  &file_store.LocalFileStore{},
 		Logger:          logger,
 		Encryptor:       encryptor,
+		ForceDownload:   forceDownload,
 	}
 	if err = syncer.PerformSync(); err != nil {
 		logger.Panic(err)
