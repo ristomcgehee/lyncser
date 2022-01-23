@@ -3,7 +3,6 @@ package file_store
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,6 +13,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/option"
 
 	"github.com/chrismcgehee/lyncser/utils"
 )
@@ -112,28 +112,12 @@ func getService(forceNewToken bool) (*drive.Service, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	service, err := drive.New(client)
+	ctx := context.Background()
+	service, err := drive.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		return nil, err
 	}
 	return service, nil
-}
-
-// isTokenInvalid returns true if the error is for an invalid token.
-func isTokenInvalid(err error) (bool, error) {
-	var oauthError *oauth2.RetrieveError
-	if errors.As(err, &oauthError) {
-		r := struct {
-			Error            string `json:"error"`
-			ErrorDescription string `json:"error_description"`
-		}{}
-		if err := json.Unmarshal(oauthError.Body, &r); err != io.EOF {
-			return false, fmt.Errorf("error unmarshalling OAuth token: %w", err)
-		}
-		return r.Error == "invalid_grant", nil
-	}
-	return false, nil
 }
 
 // getFileList gets the list of file that this app has access to.
@@ -142,7 +126,7 @@ func getFileList(service *drive.Service) ([]*drive.File, error) {
 	listFilesCall.Fields("files(name, id, parents, modifiedTime, mimeType), nextPageToken")
 	listFilesCall.Q("trashed=false")
 	var files []*drive.File
-	for true {
+	for {
 		driveFileList, err := listFilesCall.Do()
 		if err != nil {
 			return nil, fmt.Errorf("error getting file list from Google Drive: %w", err)
