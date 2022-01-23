@@ -3,7 +3,7 @@ build:
 	CGO_ENABLED=0 go build
 
 run: build
-	./lyncser sync
+	./lyncser sync --log-level=debug
 
 test:
 	go test -timeout 30s github.com/chrismcgehee/lyncser/sync
