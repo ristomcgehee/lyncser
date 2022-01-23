@@ -64,7 +64,7 @@ func syncCmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Warn("error getting force-download flag", zap.Error(err))
 	}
-	remoteFileStore, err := getRemoteFileStore(logger)
+	remoteFileStore := getRemoteFileStore(logger)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -101,7 +101,7 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	remoteFileStore, err := getRemoteFileStore(logger)
+	remoteFileStore := getRemoteFileStore(logger)
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -127,10 +127,10 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 	logger.Infof("Deleted %d files", len(files))
 }
 
-func getRemoteFileStore(logger utils.Logger) (file_store.FileStore, error) {
+func getRemoteFileStore(logger utils.Logger) file_store.FileStore {
 	return &file_store.DriveFileStore{
 		Logger: logger,
-	}, nil
+	}
 }
 
 func main() {
