@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+
 	"github.com/chrismcgehee/lyncser/filestore"
 	"github.com/chrismcgehee/lyncser/sync"
 	"github.com/chrismcgehee/lyncser/utils"
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 var rootCmd = &cobra.Command{
@@ -114,7 +115,8 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 		logger.Warn("error getting yes flag", zap.Error(err))
 	}
 	if !yes {
-		fmt.Printf("This will delete all %d files in the remote file store. Are you sure you want to continue? (y/n): ", len(files))
+		fmt.Printf("This will delete all %d files in the remote file store. Are you sure you want to continue? (y/n): ",
+			len(files))
 		var input string
 		fmt.Scanln(&input)
 		if input != "y" {

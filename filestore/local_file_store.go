@@ -35,12 +35,12 @@ func (l *LocalFileStore) WriteFileContents(path string, contentReader io.Reader)
 		return err
 	}
 	if !pathExists {
-		err = os.MkdirAll(dirName, 0766)
+		err = os.MkdirAll(dirName, 0o766)
 		if err != nil {
 			return err
 		}
 	}
-	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	out, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
 	}

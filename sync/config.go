@@ -74,14 +74,15 @@ func getGlobalConfig() (*GlobalConfig, error) {
 	}
 	var config GlobalConfig
 	data, err := ioutil.ReadFile(fullConfigPath)
-	if errors.Is(err, os.ErrNotExist) {
+	switch {
+	case errors.Is(err, os.ErrNotExist):
 		config = GlobalConfig{
 			TagPaths: map[string][]string{},
 		}
-	} else if err != nil {
+	case err != nil:
 		return nil, err
-	} else {
-		if err = yaml.Unmarshal(data, &config); err != nil {
+	default:
+		if err := yaml.Unmarshal(data, &config); err != nil {
 			return nil, err
 		}
 	}
@@ -97,15 +98,15 @@ func getLocalConfig() (*LocalConfig, error) {
 	data, err := ioutil.ReadFile(fullConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
 		configDir := path.Dir(fullConfigPath)
-		os.MkdirAll(configDir, 0700)
+		os.MkdirAll(configDir, 0o700)
 		data = []byte("tags:\n  - all\n")
-		err = os.WriteFile(fullConfigPath, data, 0644)
+		err = os.WriteFile(fullConfigPath, data, 0o644)
 	}
 	if err != nil {
 		return nil, err
 	}
 	var config LocalConfig
-	if err = yaml.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}
 	return &config, nil
@@ -128,7 +129,7 @@ func getLocalStateData() (*LocalStateData, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err = json.Unmarshal(data, &stateData); err != nil {
+		if err := json.Unmarshal(data, &stateData); err != nil {
 			return nil, err
 		}
 	}
@@ -145,7 +146,7 @@ func saveLocalStateData(stateData *LocalStateData) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(realpath, data, 0644)
+	return ioutil.WriteFile(realpath, data, 0o644)
 }
 
 // getRemoteStateData returns the state data that is stored remotely.
@@ -170,7 +171,7 @@ func getRemoteStateData(remoteFileStore filestore.FileStore) (*RemoteStateData, 
 		return nil, err
 	}
 	var stateData *RemoteStateData
-	if err = json.Unmarshal(contents, &stateData); err != nil {
+	if err := json.Unmarshal(contents, &stateData); err != nil {
 		return nil, err
 	}
 	return stateData, nil
@@ -199,7 +200,7 @@ func GetEncryptionKey() ([]byte, error) {
 			return keyBytes, err
 		}
 		keyHex = hex.EncodeToString(keyBytes)
-		err = os.WriteFile(fullEncryptionKeyPath, []byte(keyHex), 0600)
+		err = os.WriteFile(fullEncryptionKeyPath, []byte(keyHex), 0o600)
 	} else if err == nil {
 		keyHex = string(keyFileBytes)
 	}

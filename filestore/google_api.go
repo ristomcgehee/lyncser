@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	// Path where OAuth client credentials are stored
+	// Path where OAuth client credentials are stored.
 	credentialsFilePath = "~/.config/lyncser/credentials.json"
-	// Path where the OAuth token will be stored
+	// Path where the OAuth token will be stored.
 	tokenFilePath = "~/.config/lyncser/token.json"
-	// Mime type for files that are actually folders
+	// Mime type for files that are actually folders.
 	mimeTypeFolder = "application/vnd.google-apps.folder"
 )
 
@@ -83,7 +83,7 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 // saveToken saves a token to a file path.
 func saveToken(path string, token *oauth2.Token) error {
 	fmt.Printf("Saving credential file to: %s\n", path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func saveToken(path string, token *oauth2.Token) error {
 	return err
 }
 
-// getService returns a service that can be used to make API calls
+// getService returns a service that can be used to make API calls.
 func getService(forceNewToken bool) (*drive.Service, error) {
 	realPath, err := utils.RealPath(credentialsFilePath)
 	if err != nil {
@@ -158,7 +158,8 @@ func createDir(service *drive.Service, name, parentID string) (string, error) {
 }
 
 // createFile creates the file in Google Drive.
-func createFile(service *drive.Service, name string, mimeType string, content io.Reader, parentID string) (*drive.File, error) {
+func createFile(service *drive.Service, name, mimeType string, content io.Reader, parentID string) (*drive.File,
+	error) {
 	f := &drive.File{
 		MimeType: mimeType,
 		Name:     name,
@@ -182,7 +183,8 @@ func downloadFileContents(service *drive.Service, fileID string) (io.ReadCloser,
 }
 
 // updateFileContents uploads the contents from the io.Reader.
-func updateFileContents(service *drive.Service, driveFile *drive.File, fileID string, r io.Reader) (*drive.File, error) {
+func updateFileContents(service *drive.Service, driveFile *drive.File, fileID string, r io.Reader) (*drive.File,
+	error) {
 	driveFile = &drive.File{
 		MimeType: driveFile.MimeType,
 		Name:     driveFile.Name,

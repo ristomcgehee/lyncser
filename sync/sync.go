@@ -131,7 +131,7 @@ func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []*filestor
 	return remoteFilesToHandle
 }
 
-// Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud
+// Creates the file if it does not exist in the cloud, otherwise downloads or uploads the file to the cloud.
 func (s *Syncer) handleFile(fileName string, isRemoteDir bool) error {
 	realPath, err := utils.RealPath(fileName)
 	if err != nil {
@@ -167,7 +167,7 @@ func (s *Syncer) handleFile(fileName string, isRemoteDir bool) error {
 		s.Logger.Warnf("File '%s' does not exist locally or remotely", file.FriendlyPath) // ¯\_(ツ)_/¯
 		return nil
 	}
-	if err = s.syncFile(file, fileExistsLocally, fileExistsRemotely); err != nil {
+	if err := s.syncFile(file, fileExistsLocally, fileExistsRemotely); err != nil {
 		return err
 	}
 	s.stateData.FileStateData[file.FriendlyPath].LastCloudUpdate = time.Now().UTC()
@@ -207,7 +207,7 @@ func doMarkDeleted(fileExistsLocally bool, lastCloudUpdate time.Time) bool {
 	return !fileExistsLocally && utils.HasBeenSynced(lastCloudUpdate)
 }
 
-// syncFile uploads/downloads the file as necessary
+// syncFile uploads/downloads the file as necessary.
 func (s *Syncer) syncFile(file SyncedFile, fileExistsLocally, fileExistsRemotely bool) error {
 	var err error
 	var modTimeCloud time.Time
@@ -232,17 +232,18 @@ func (s *Syncer) syncFile(file SyncedFile, fileExistsLocally, fileExistsRemotely
 	uploadFile := doUploadFile(fileExistsLocally, fileExistsRemotely, modTimeLocal, modTimeCloud, lastCloudUpdate)
 	markDeleted := doMarkDeleted(fileExistsLocally, lastCloudUpdate)
 
-	if downloadFile {
-		if err = s.downloadFile(file); err != nil {
+	switch {
+	case downloadFile:
+		if err := s.downloadFile(file); err != nil {
 			return err
 		}
 		s.Logger.Infof("File '%s' successfully downloaded", file.FriendlyPath)
-	} else if uploadFile {
-		if err = s.uploadFile(file); err != nil {
+	case uploadFile:
+		if err := s.uploadFile(file); err != nil {
 			return err
 		}
 		s.Logger.Infof("File '%s' successfully uploaded", file.FriendlyPath)
-	} else if markDeleted {
+	case markDeleted:
 		// mark the file as deleted so it's not downloaded again
 		s.stateData.FileStateData[file.FriendlyPath].DeletedLocal = true
 	}
@@ -284,7 +285,8 @@ func (s *Syncer) downloadFile(file SyncedFile) error {
 	return nil
 }
 
-func (s *Syncer) cleanupRemoteFiles(remoteFiles []*filestore.StoredFile, globalConfig *GlobalConfig) (*RemoteStateData, error) {
+func (s *Syncer) cleanupRemoteFiles(remoteFiles []*filestore.StoredFile,
+	globalConfig *GlobalConfig) (*RemoteStateData, error) {
 	remoteStateData, err := getRemoteStateData(s.RemoteFileStore)
 	if err != nil {
 		return remoteStateData, err
@@ -319,7 +321,7 @@ func (s *Syncer) cleanupRemoteFiles(remoteFiles []*filestore.StoredFile, globalC
 		if fileData.MarkDeleted.After(time.Now().AddDate(0, 0, -30)) {
 			continue
 		}
-		if err = s.RemoteFileStore.DeleteFile(filePath); err != nil {
+		if err := s.RemoteFileStore.DeleteFile(filePath); err != nil {
 			return remoteStateData, err
 		}
 		delete(remoteStateData.FileStateData, filePath)
