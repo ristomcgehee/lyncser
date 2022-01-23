@@ -65,3 +65,13 @@ func (e *AESGCMEncryptor) DecryptReader(reader io.ReadCloser) (io.ReadCloser, er
 
 	return decryptedReader, nil
 }
+
+type NopEncryptor struct{}
+
+func (e *NopEncryptor) EncryptReader(reader io.Reader) (io.Reader, error) {
+	return reader, nil
+}
+
+func (e *NopEncryptor) DecryptReader(reader io.ReadCloser) (io.ReadCloser, error) {
+	return reader, nil
+}

@@ -22,6 +22,7 @@ func init() {
 	}
 	addCommonFlags(syncCmd)
 	syncCmd.Flags().BoolP("force-download", "f", false, "Forces download of all files")
+	syncCmd.Flags().BoolP("dont-encrypt", "d", false, "Don't encrypt files. By default, files are encrypted.")
 	rootCmd.AddCommand(syncCmd)
 	deleteFilesCmd := &cobra.Command{
 		Use:   "deleteAllRemoteFiles",
@@ -59,17 +60,29 @@ func syncCmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	forceDownload, _ := cmd.Flags().GetBool("force-download")
+	forceDownload, err := cmd.Flags().GetBool("force-download")
+	if err != nil {
+		logger.Warn("error getting force-download flag", zap.Error(err))
+	}
 	remoteFileStore, err := getRemoteFileStore(logger)
 	if err != nil {
 		logger.Panic(err)
 	}
-	encryptionKey, err := sync.GetEncryptionKey()
+	dontEncrypt, err := cmd.Flags().GetBool("dont-encrypt")
 	if err != nil {
-		logger.Panic(err)
+		logger.Warn("error getting dont-encrypt flag", zap.Error(err))
 	}
-	encryptor := &utils.AESGCMEncryptor{
-		Key: encryptionKey,
+	var encryptor utils.ReaderEncryptor
+	if dontEncrypt {
+		encryptor = &utils.NopEncryptor{}
+	} else {
+		encryptionKey, err := sync.GetEncryptionKey()
+		if err != nil {
+			logger.Panic(err)
+		}
+		encryptor = &utils.AESGCMEncryptor{
+			Key: encryptionKey,
+		}
 	}
 	syncer := sync.Syncer{
 		RemoteFileStore: remoteFileStore,
@@ -96,7 +109,10 @@ func deleteRemoteFiles(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Panic(err)
 	}
-	yes, _ := cmd.Flags().GetBool("yes")
+	yes, err := cmd.Flags().GetBool("yes")
+	if err != nil {
+		logger.Warn("error getting yes flag", zap.Error(err))
+	}
 	if !yes {
 		fmt.Printf("This will delete all %d files in the remote file store. Are you sure you want to continue? (y/n): ", len(files))
 		var input string
