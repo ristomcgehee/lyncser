@@ -64,7 +64,7 @@ func (d *DriveFileStore) GetFiles() ([]*StoredFile, error) {
 		parentId := file.Parents[0]
 		path := file.Name
 		foundParent := false
-		for true {
+		for {
 			if parentId == d.lyncserRootId {
 				foundParent = true
 				break
@@ -79,7 +79,7 @@ func (d *DriveFileStore) GetFiles() ([]*StoredFile, error) {
 			parentId = parentDir.Parents[0]
 		}
 		if foundParent {
-			if !strings.HasPrefix(path, "~/") {
+			if !strings.HasPrefix(path, "~") {
 				// When stored in Google Drive, file names do not start with '/'. We make up for that here.
 				path = "/" + path
 			}
