@@ -34,3 +34,11 @@ endif
 ifndef GCP_OAUTH_TOKEN
 	$(error GCP_OAUTH_TOKEN is undefined)
 endif
+
+.PHONY: install
+install: ## Installs all dependencies needed
+	@echo Installing tools from tools/tools.go
+	cd tools; cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
+
+lint:
+	golangci-lint run -c .golangci.yml

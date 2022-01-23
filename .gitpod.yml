@@ -3,7 +3,7 @@ tasks:
       make build && mkdir -p /workspace/go/bin && ln -s $PWD/lyncser /workspace/go/bin/lyncser
       make docker-build
       pip3 install pytest
-      go install github.com/golang/mock/mockgen@v1.6.0
+      make install
       go install github.com/go-delve/delve/cmd/dlv@2f13672765fe
       go install honnef.co/go/tools/cmd/staticcheck@latest
 vscode:
