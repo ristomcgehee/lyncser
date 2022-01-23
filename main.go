@@ -15,6 +15,7 @@ var rootCmd = &cobra.Command{
 	Use: "lyncser",
 }
 
+//nolint:gochecknoinits
 func init() {
 	syncCmd := &cobra.Command{
 		Use:   "sync",

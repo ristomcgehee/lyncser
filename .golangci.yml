@@ -64,7 +64,7 @@ linters-settings:
     check-type-assertions: true
     check-blank: true
   govet:
-    enable:
+    disable:
       - fieldalignment
   godox:
     keywords:

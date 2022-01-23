@@ -1,4 +1,4 @@
-//nolint:errcheck
+//nolint:errcheck,unparam
 package sync
 
 import (
