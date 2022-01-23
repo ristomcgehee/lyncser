@@ -118,6 +118,7 @@ func (s *Syncer) PerformSync() error {
 // Get all the remote files that start with pathToSync if it is a directory.
 func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []*filestore.StoredFile) []*filestore.StoredFile {
 	remoteFilesToHandle := make([]*filestore.StoredFile, 0)
+	//nolint:errcheck
 	stat, _ := os.Stat(realPath)
 	if stat != nil && !stat.IsDir() {
 		return remoteFilesToHandle

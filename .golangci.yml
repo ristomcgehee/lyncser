@@ -58,7 +58,7 @@ linters:
     - unused
     - varcheck
     - whitespace
-    - wrapcheck
+    # - wrapcheck
 linters-settings:
   errcheck:
     check-type-assertions: true

@@ -45,12 +45,15 @@ func getLogger(cmd *cobra.Command) (*zap.SugaredLogger, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.Level.UnmarshalText([]byte(logLevel))
+	if err := cfg.Level.UnmarshalText([]byte(logLevel)); err != nil {
+		return nil, err
+	}
 	cfg.Encoding = "console"
 	logger, err := cfg.Build()
 	if err != nil {
 		return nil, err
 	}
+	//nolint:errcheck
 	defer logger.Sync() // flushes buffer, if any
 	sugar := logger.Sugar()
 	return sugar, nil
@@ -136,5 +139,7 @@ func getRemoteFileStore(logger utils.Logger) filestore.FileStore {
 }
 
 func main() {
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		panic(err)
+	}
 }

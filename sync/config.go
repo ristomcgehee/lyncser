@@ -98,7 +98,9 @@ func getLocalConfig() (*LocalConfig, error) {
 	data, err := ioutil.ReadFile(fullConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
 		configDir := path.Dir(fullConfigPath)
-		os.MkdirAll(configDir, 0o700)
+		if err := os.MkdirAll(configDir, 0o700); err != nil {
+			return nil, err
+		}
 		data = []byte("tags:\n  - all\n")
 		err = os.WriteFile(fullConfigPath, data, 0o644)
 	}

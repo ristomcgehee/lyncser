@@ -46,12 +46,14 @@ func InSlice(item string, slice []string) bool {
 
 // Returns true if the file has been synced based on the last cloud update.
 func HasBeenSynced(lastCloudUpdate time.Time) bool {
+	//nolint:errcheck
 	neverSynced, _ := time.Parse(TimeFormat, neverSyncedStr)
 	return lastCloudUpdate.After(neverSynced)
 }
 
 // Returns a time used to signify that a file has never been synced.
 func GetNeverSynced() time.Time {
+	//nolint:errcheck
 	neverSynced, _ := time.Parse(TimeFormat, neverSyncedStr)
 	return neverSynced
 }

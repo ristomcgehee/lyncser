@@ -116,8 +116,7 @@ func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
 func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error {
 	fileID, exists := d.getFileID(path)
 	if !exists {
-		d.createFile(path, reader)
-		return nil
+		return d.createFile(path, reader)
 	}
 	driveFile := d.mapIDToFile[fileID]
 	_, err := updateFileContents(d.service, driveFile, fileID, reader)
