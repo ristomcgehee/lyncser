@@ -102,7 +102,7 @@ func getLocalConfig() (*LocalConfig, error) {
 			return nil, err
 		}
 		data = []byte("tags:\n  - all\n")
-		err = os.WriteFile(fullConfigPath, data, 0o644)
+		err = os.WriteFile(fullConfigPath, data, 0o600)
 	}
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ func saveLocalStateData(stateData *LocalStateData) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(realpath, data, 0o644)
+	return ioutil.WriteFile(realpath, data, 0o600)
 }
 
 // getRemoteStateData returns the state data that is stored remotely.

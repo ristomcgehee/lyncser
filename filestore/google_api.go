@@ -20,8 +20,10 @@ import (
 
 const (
 	// Path where OAuth client credentials are stored.
+	//nolint:gosec // Not hardcoded credentials
 	credentialsFilePath = "~/.config/lyncser/credentials.json"
 	// Path where the OAuth token will be stored.
+	//nolint:gosec // Not hardcoded credentials
 	tokenFilePath = "~/.config/lyncser/token.json"
 	// Mime type for files that are actually folders.
 	mimeTypeFolder = "application/vnd.google-apps.folder"
