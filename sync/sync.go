@@ -54,52 +54,8 @@ func (s *Syncer) PerformSync() error {
 			continue
 		}
 		for _, pathToSync := range paths {
-			realPath, err := utils.RealPath(pathToSync)
-			if err != nil {
-				return err
-			}
-			realPath, err = filepath.EvalSymlinks(realPath)
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return err
-			}
-			remoteFilesToHandle := getMatchingRemoteFiles(pathToSync, realPath, remoteFiles)
-
-			// Recursively sync pathToSync.
-			err = filepath.WalkDir(realPath, func(path string, d fs.DirEntry, err error) error {
-				if err != nil && !errors.Is(err, fs.ErrNotExist) {
-					return err
-				}
-				if d != nil && (d.IsDir() || !d.Type().IsRegular()) {
-					return nil
-				}
-				path = strings.Replace(path, realPath, pathToSync, 1)
-				var remoteFile *filestore.StoredFile
-				idxRemoteFile := -1
-				for i, remoteFileToHandle := range remoteFilesToHandle {
-					if remoteFileToHandle.Path == path {
-						remoteFile = remoteFileToHandle
-						idxRemoteFile = i
-						break
-					}
-				}
-				isRemoteDir := remoteFile != nil && remoteFile.IsDir
-				if err = s.handleFile(path, isRemoteDir); err != nil {
-					s.Logger.Errorf("Error syncing file '%s': %v", path, err)
-				}
-				if remoteFile != nil {
-					remoteFilesToHandle = append(remoteFilesToHandle[:idxRemoteFile], remoteFilesToHandle[idxRemoteFile+1:]...)
-				}
-				return nil
-			})
-			if err != nil {
-				s.Logger.Errorf("Error walking directory '%s': %v", pathToSync, err)
-			}
-
-			// For any files that were not found locally, we'll download them now.
-			for _, remoteFile := range remoteFilesToHandle {
-				if err = s.handleFile(remoteFile.Path, remoteFile.IsDir); err != nil {
-					s.Logger.Errorf("Error syncing remote file '%s': %v", remoteFile, err)
-				}
+			if err := s.syncPath(pathToSync, remoteFiles); err != nil {
+				s.Logger.Errorf("Error syncing path '%s': %s", pathToSync, err)
 			}
 		}
 	}
@@ -113,6 +69,59 @@ func (s *Syncer) PerformSync() error {
 	}
 
 	return saveLocalStateData(s.stateData)
+}
+
+// syncPath syncs the given path, recursively if it's a directory.
+func (s *Syncer) syncPath(pathToSync string, remoteFiles []*filestore.StoredFile) error {
+	realPath, err := utils.RealPath(pathToSync)
+	if err != nil {
+		return err
+	}
+	realPath, err = filepath.EvalSymlinks(realPath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	remoteFilesToHandle := getMatchingRemoteFiles(pathToSync, realPath, remoteFiles)
+
+	// Recursively sync pathToSync.
+	err = filepath.WalkDir(realPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		if d != nil && (d.IsDir() || !d.Type().IsRegular()) {
+			return nil
+		}
+		path = strings.Replace(path, realPath, pathToSync, 1)
+		var remoteFile *filestore.StoredFile
+		idxRemoteFile := -1
+		for i, remoteFileToHandle := range remoteFilesToHandle {
+			if remoteFileToHandle.Path == path {
+				remoteFile = remoteFileToHandle
+				idxRemoteFile = i
+				break
+			}
+		}
+		isRemoteDir := remoteFile != nil && remoteFile.IsDir
+		if err = s.handleFile(path, isRemoteDir); err != nil {
+			s.Logger.Errorf("Error syncing file '%s': %v", path, err)
+		}
+		if remoteFile != nil {
+			remoteFilesToHandle = append(remoteFilesToHandle[:idxRemoteFile], remoteFilesToHandle[idxRemoteFile+1:]...)
+		}
+		return nil
+	})
+	if err != nil {
+		s.Logger.Errorf("Error walking directory '%s': %v", pathToSync, err)
+	}
+
+	// For any files that were not found locally, we'll download them now.
+	for _, remoteFile := range remoteFilesToHandle {
+		if err = s.handleFile(remoteFile.Path, remoteFile.IsDir); err != nil {
+			s.Logger.Errorf("Error syncing remote file '%s': %v", remoteFile, err)
+		}
+	}
+
+	return nil
 }
 
 // Get all the remote files that start with pathToSync if it is a directory.
