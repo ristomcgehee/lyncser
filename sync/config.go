@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	time "time"
 
 	yaml "gopkg.in/yaml.v3"
@@ -206,6 +207,6 @@ func GetEncryptionKey() ([]byte, error) {
 	if err != nil {
 		return keyBytes, err
 	}
-	keyBytes, err = hex.DecodeString(keyHex)
+	keyBytes, err = hex.DecodeString(strings.TrimSpace(keyHex))
 	return keyBytes, err
 }
