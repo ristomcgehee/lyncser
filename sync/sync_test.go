@@ -264,6 +264,7 @@ func getLogger(ctrl *gomock.Controller) *mocks.MockLogger {
 }
 
 func TestHandleFile(t *testing.T) {
+	t.Parallel()
 	syncedFile := SyncedFile{
 		FriendlyPath: "~/test_file1",
 	}
@@ -298,6 +299,7 @@ func TestHandleFile(t *testing.T) {
 }
 
 func TestCleanupRemoteFiles(t *testing.T) {
+	t.Parallel()
 	syncer := &Syncer{
 		stateData: &LocalStateData{
 			FileStateData: map[string]*LocalFileStateData{},
