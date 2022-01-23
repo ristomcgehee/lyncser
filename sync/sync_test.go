@@ -263,7 +263,7 @@ func getLogger(ctrl *gomock.Controller) *mocks.MockLogger {
 	return logger
 }
 
-//nolint:parallel Uses global variables
+//nolint:paralleltest // Uses global variables
 func TestHandleFile(t *testing.T) {
 	syncedFile := SyncedFile{
 		FriendlyPath: "~/test_file1",
@@ -298,7 +298,7 @@ func TestHandleFile(t *testing.T) {
 	suite.Run()
 }
 
-//nolint:parallel Uses global variables
+//nolint:paralleltest // Uses global variables
 func TestCleanupRemoteFiles(t *testing.T) {
 	syncer := &Syncer{
 		stateData: &LocalStateData{
