@@ -66,25 +66,24 @@ type LocalFileStateData struct {
 	DeletedLocal bool
 }
 
-// getGlobalConfig reads and parses the global config file. If it does not exist, it will create it.
+// getGlobalConfig reads and parses the global config file. If it does not exist, it return an empty config object.
 func getGlobalConfig() (*GlobalConfig, error) {
 	fullConfigPath, err := utils.RealPath(globalConfigPath)
 	if err != nil {
 		return nil, err
 	}
+	var config GlobalConfig
 	data, err := ioutil.ReadFile(fullConfigPath)
 	if errors.Is(err, os.ErrNotExist) {
-		configDir := path.Dir(fullConfigPath)
-		os.MkdirAll(configDir, 0700)
-		data = []byte("files:\n  all:\n    # - ~/.bashrc\n")
-		err = os.WriteFile(fullConfigPath, data, 0644)
-	}
-	if err != nil {
+		config = GlobalConfig{
+			TagPaths: map[string][]string{},
+		}
+	} else if err != nil {
 		return nil, err
-	}
-	var config GlobalConfig
-	if err = yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
+	} else {
+		if err = yaml.Unmarshal(data, &config); err != nil {
+			return nil, err
+		}
 	}
 	return &config, nil
 }
