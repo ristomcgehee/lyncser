@@ -10,7 +10,7 @@ import (
 	"github.com/go-bdd/gobdd"
 	"github.com/golang/mock/gomock"
 
-	"github.com/chrismcgehee/lyncser/file_store"
+	"github.com/chrismcgehee/lyncser/filestore"
 	"github.com/chrismcgehee/lyncser/sync/mocks"
 	"github.com/chrismcgehee/lyncser/utils"
 )
@@ -65,7 +65,7 @@ type assertExpectationFunc func(t gobdd.StepTest, ctx gobdd.Context)
 var (
 	expectations = []assertExpectationFunc{}
 	globalConfig = &GlobalConfig{}
-	remoteFiles  = []*file_store.StoredFile{}
+	remoteFiles  = []*filestore.StoredFile{}
 )
 
 func addExpectation(t gobdd.StepTest, ctx gobdd.Context, expectation assertExpectationFunc) {
@@ -144,7 +144,7 @@ func cloudModifiedTime(t gobdd.StepTest, ctx gobdd.Context, modifiedTime string)
 }
 
 func cloudHasFile(t gobdd.StepTest, ctx gobdd.Context, filePath string) {
-	remoteFiles = append(remoteFiles, &file_store.StoredFile{
+	remoteFiles = append(remoteFiles, &filestore.StoredFile{
 		Path: filePath,
 	})
 }
@@ -318,7 +318,7 @@ func TestCleanupRemoteFiles(t *testing.T) {
 				"all": {},
 			},
 		}
-		remoteFiles = []*file_store.StoredFile{}
+		remoteFiles = []*filestore.StoredFile{}
 		remoteFileStore.EXPECT().
 			WriteFileContents(gomock.Eq(stateRemoteFilePath), gomock.Any())
 		expectations = []assertExpectationFunc{}

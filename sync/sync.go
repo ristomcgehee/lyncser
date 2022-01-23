@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chrismcgehee/lyncser/file_store"
+	"github.com/chrismcgehee/lyncser/filestore"
 	"github.com/chrismcgehee/lyncser/utils"
 )
 
@@ -19,8 +19,8 @@ type SyncedFile struct {
 }
 
 type Syncer struct {
-	RemoteFileStore file_store.FileStore
-	LocalFileStore  file_store.FileStore
+	RemoteFileStore filestore.FileStore
+	LocalFileStore  filestore.FileStore
 	Logger          utils.Logger
 	// Used to encrypt files stored in the remote file store.
 	Encryptor utils.ReaderEncryptor
@@ -73,7 +73,7 @@ func (s *Syncer) PerformSync() error {
 					return nil
 				}
 				path = strings.Replace(path, realPath, pathToSync, 1)
-				var remoteFile *file_store.StoredFile
+				var remoteFile *filestore.StoredFile
 				idxRemoteFile := -1
 				for i, remoteFileToHandle := range remoteFilesToHandle {
 					if remoteFileToHandle.Path == path {
@@ -116,8 +116,8 @@ func (s *Syncer) PerformSync() error {
 }
 
 // Get all the remote files that start with pathToSync if it is a directory.
-func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []*file_store.StoredFile) []*file_store.StoredFile {
-	remoteFilesToHandle := make([]*file_store.StoredFile, 0)
+func getMatchingRemoteFiles(pathToSync, realPath string, remoteFiles []*filestore.StoredFile) []*filestore.StoredFile {
+	remoteFilesToHandle := make([]*filestore.StoredFile, 0)
 	stat, _ := os.Stat(realPath)
 	if stat != nil && !stat.IsDir() {
 		return remoteFilesToHandle
@@ -284,7 +284,7 @@ func (s *Syncer) downloadFile(file SyncedFile) error {
 	return nil
 }
 
-func (s *Syncer) cleanupRemoteFiles(remoteFiles []*file_store.StoredFile, globalConfig *GlobalConfig) (*RemoteStateData, error) {
+func (s *Syncer) cleanupRemoteFiles(remoteFiles []*filestore.StoredFile, globalConfig *GlobalConfig) (*RemoteStateData, error) {
 	remoteStateData, err := getRemoteStateData(s.RemoteFileStore)
 	if err != nil {
 		return remoteStateData, err

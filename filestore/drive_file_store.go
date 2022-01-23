@@ -1,4 +1,4 @@
-package file_store
+package filestore
 
 import (
 	"io"
@@ -22,7 +22,7 @@ type DriveFileStore struct {
 	// lyncser.
 	mapIdToFile map[string]*drive.File
 	// The Google Drive file id of the top-level folder where lyncser files are stored.
-	lyncserRootId string
+	lyncserRootID string
 }
 
 func (d *DriveFileStore) GetFiles() ([]*StoredFile, error) {
@@ -33,7 +33,7 @@ func (d *DriveFileStore) GetFiles() ([]*StoredFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	d.lyncserRootId = ""
+	d.lyncserRootID = ""
 	fileList, err := getFileList(d.service)
 	if err != nil {
 		return nil, err
@@ -44,28 +44,28 @@ func (d *DriveFileStore) GetFiles() ([]*StoredFile, error) {
 	d.mapIdToFile = make(map[string]*drive.File)
 	for _, file := range fileList {
 		if file.Name == lyncserRootName {
-			d.lyncserRootId = file.Id
+			d.lyncserRootID = file.Id
 			continue
 		}
 		d.mapIdToFile[file.Id] = file
 	}
 
-	if d.lyncserRootId == "" {
-		d.lyncserRootId, err = createDir(d.service, lyncserRootName, "")
+	if d.lyncserRootID == "" {
+		d.lyncserRootID, err = createDir(d.service, lyncserRootName, "")
 		if err != nil {
 			return nil, err
 		}
-		d.Logger.Debugf("New %s with id %s created", lyncserRootName, d.lyncserRootId)
+		d.Logger.Debugf("New %s with id %s created", lyncserRootName, d.lyncserRootID)
 	}
 
-	// Populate d.mapPathToFileId with the files that we can trace back to d.lyncserRootId
+	// Populate d.mapPathToFileId with the files that we can trace back to d.lyncserRootID
 	d.mapPathToFileId = make(map[string]string)
 	for id, file := range d.mapIdToFile {
 		parentId := file.Parents[0]
 		path := file.Name
 		foundParent := false
 		for {
-			if parentId == d.lyncserRootId {
+			if parentId == d.lyncserRootID {
 				foundParent = true
 				break
 			}
@@ -99,12 +99,12 @@ func (d *DriveFileStore) GetFiles() ([]*StoredFile, error) {
 }
 
 func (d *DriveFileStore) GetFileContents(path string) (io.ReadCloser, error) {
-	fileId, _ := d.getFiledId(path)
+	fileId, _ := d.getFiledID(path)
 	return downloadFileContents(d.service, fileId)
 }
 
 func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
-	fileId, _ := d.getFiledId(path)
+	fileId, _ := d.getFiledID(path)
 	driveFile := d.mapIdToFile[fileId]
 	modTimeCloud, err := time.Parse(utils.TimeFormat, driveFile.ModifiedTime)
 	if err != nil {
@@ -114,7 +114,7 @@ func (d *DriveFileStore) GetModifiedTime(path string) (time.Time, error) {
 }
 
 func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error {
-	fileId, exists := d.getFiledId(path)
+	fileId, exists := d.getFiledID(path)
 	if !exists {
 		d.createFile(path, reader)
 		return nil
@@ -125,7 +125,7 @@ func (d *DriveFileStore) WriteFileContents(path string, reader io.Reader) error 
 }
 
 func (d *DriveFileStore) DeleteFile(file string) error {
-	fileId, exists := d.getFiledId(file)
+	fileId, exists := d.getFiledID(file)
 	if !exists {
 		return nil
 	}
@@ -133,17 +133,17 @@ func (d *DriveFileStore) DeleteFile(file string) error {
 }
 
 func (d *DriveFileStore) DeleteAllFiles() error {
-	return deleteFile(d.service, d.lyncserRootId)
+	return deleteFile(d.service, d.lyncserRootID)
 }
 
 func (d *DriveFileStore) FileExists(path string) (bool, error) {
-	_, ok := d.getFiledId(path)
+	_, ok := d.getFiledID(path)
 	return ok, nil
 }
 
-// getFiledId returns the Google Drive file id for the given path if it exists, otherwise it returns false for
+// getFiledID returns the Google Drive file id for the given path if it exists, otherwise it returns false for
 // the second return value.
-func (d *DriveFileStore) getFiledId(path string) (string, bool) {
+func (d *DriveFileStore) getFiledID(path string) (string, bool) {
 	fileId, ok := d.mapPathToFileId[path]
 	return fileId, ok
 }
@@ -152,23 +152,23 @@ func (d *DriveFileStore) getFiledId(path string) (string, bool) {
 // Returns the Google Drive file id for the directory.
 func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
 	if dirName == "" || dirName == "." || dirName == "/" {
-		return d.lyncserRootId, nil
+		return d.lyncserRootID, nil
 	}
-	dirId, ok := d.getFiledId(dirName)
+	dirId, ok := d.getFiledID(dirName)
 	if ok {
 		return dirId, nil // This directory already exists
 	}
 	var err error
 	parent := filepath.Dir(dirName)
-	parentId, ok := d.getFiledId(parent)
+	parentID, ok := d.getFiledID(parent)
 	if !ok {
 		// The parent directory does not exist either. Recursively create it.
-		parentId, err = d.createDirIfNecessary(parent)
+		parentID, err = d.createDirIfNecessary(parent)
 		if err != nil {
 			return "", err
 		}
 	}
-	dirId, err = createDir(d.service, dirName, parentId)
+	dirId, err = createDir(d.service, dirName, parentID)
 	if err != nil {
 		return "", err
 	}
@@ -178,12 +178,12 @@ func (d *DriveFileStore) createDirIfNecessary(dirName string) (string, error) {
 }
 
 func (d *DriveFileStore) createFile(path string, reader io.Reader) error {
-	dirId, err := d.createDirIfNecessary(filepath.Dir(path))
+	dirID, err := d.createDirIfNecessary(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
 	baseName := filepath.Base(path)
-	driveFile, err := createFile(d.service, baseName, "text/plain", reader, dirId)
+	driveFile, err := createFile(d.service, baseName, "text/plain", reader, dirID)
 	if err != nil {
 		return err
 	}

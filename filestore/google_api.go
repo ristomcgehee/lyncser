@@ -1,4 +1,4 @@
-package file_store
+package filestore
 
 import (
 	"context"
@@ -141,13 +141,13 @@ func getFileList(service *drive.Service) ([]*drive.File, error) {
 }
 
 // createDir creates a directory in Google Drive. Returns the Id of the directory created.
-func createDir(service *drive.Service, name, parentId string) (string, error) {
+func createDir(service *drive.Service, name, parentID string) (string, error) {
 	d := &drive.File{
 		Name:     filepath.Base(name),
 		MimeType: mimeTypeFolder,
 	}
-	if parentId != "" {
-		d.Parents = []string{parentId}
+	if parentID != "" {
+		d.Parents = []string{parentID}
 	}
 
 	file, err := service.Files.Create(d).Do()
@@ -158,11 +158,11 @@ func createDir(service *drive.Service, name, parentId string) (string, error) {
 }
 
 // createFile creates the file in Google Drive.
-func createFile(service *drive.Service, name string, mimeType string, content io.Reader, parentId string) (*drive.File, error) {
+func createFile(service *drive.Service, name string, mimeType string, content io.Reader, parentID string) (*drive.File, error) {
 	f := &drive.File{
 		MimeType: mimeType,
 		Name:     name,
-		Parents:  []string{parentId},
+		Parents:  []string{parentID},
 	}
 	file, err := service.Files.Create(f).Media(content).Do()
 	if err != nil {
@@ -172,8 +172,8 @@ func createFile(service *drive.Service, name string, mimeType string, content io
 }
 
 // downloadFileContents returns the contents of the file as an io.ReadCloser.
-func downloadFileContents(service *drive.Service, fileId string) (io.ReadCloser, error) {
-	fileGetCall := service.Files.Get(fileId)
+func downloadFileContents(service *drive.Service, fileID string) (io.ReadCloser, error) {
+	fileGetCall := service.Files.Get(fileID)
 	resp, err := fileGetCall.Download()
 	if err != nil {
 		return nil, fmt.Errorf("error downloading file contents from Google Drive: %w", err)
@@ -182,12 +182,12 @@ func downloadFileContents(service *drive.Service, fileId string) (io.ReadCloser,
 }
 
 // updateFileContents uploads the contents from the io.Reader.
-func updateFileContents(service *drive.Service, driveFile *drive.File, fileId string, r io.Reader) (*drive.File, error) {
+func updateFileContents(service *drive.Service, driveFile *drive.File, fileID string, r io.Reader) (*drive.File, error) {
 	driveFile = &drive.File{
 		MimeType: driveFile.MimeType,
 		Name:     driveFile.Name,
 	}
-	fileUpdateCall := service.Files.Update(fileId, driveFile)
+	fileUpdateCall := service.Files.Update(fileID, driveFile)
 	fileUpdateCall.Media(r)
 	file, err := fileUpdateCall.Do()
 	if err != nil {
@@ -197,8 +197,8 @@ func updateFileContents(service *drive.Service, driveFile *drive.File, fileId st
 }
 
 // deleteFile deletes the file in Google Drive.
-func deleteFile(service *drive.Service, fileId string) error {
-	fileDeleteCall := service.Files.Delete(fileId)
+func deleteFile(service *drive.Service, fileID string) error {
+	fileDeleteCall := service.Files.Delete(fileID)
 	if err := fileDeleteCall.Do(); err != nil {
 		return fmt.Errorf("error deleting file from Google Drive: %w", err)
 	}

@@ -14,7 +14,7 @@ import (
 
 	yaml "gopkg.in/yaml.v3"
 
-	"github.com/chrismcgehee/lyncser/file_store"
+	"github.com/chrismcgehee/lyncser/filestore"
 	"github.com/chrismcgehee/lyncser/utils"
 )
 
@@ -149,7 +149,7 @@ func saveLocalStateData(stateData *LocalStateData) error {
 }
 
 // getRemoteStateData returns the state data that is stored remotely.
-func getRemoteStateData(remoteFileStore file_store.FileStore) (*RemoteStateData, error) {
+func getRemoteStateData(remoteFileStore filestore.FileStore) (*RemoteStateData, error) {
 	exists, err := remoteFileStore.FileExists(stateRemoteFilePath)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func getRemoteStateData(remoteFileStore file_store.FileStore) (*RemoteStateData,
 	return stateData, nil
 }
 
-func saveRemoteStateData(stateData *RemoteStateData, remoteFileStore file_store.FileStore) error {
+func saveRemoteStateData(stateData *RemoteStateData, remoteFileStore filestore.FileStore) error {
 	data, err := json.MarshalIndent(stateData, "", " ")
 	if err != nil {
 		return err

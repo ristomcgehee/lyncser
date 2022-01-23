@@ -21,9 +21,9 @@ re-generate the mock implementations. To do this, run:
 make mocks
 ```
 
-## file_store package
-The file_store package contains the interfaces and implementations for uploading and downloading files. Interacting with
-the local file system should be done using [files_store/local_file_store.go](files_store/local_file_store.go). This is so
+## filestore package
+The filestore package contains the interfaces and implementations for uploading and downloading files. Interacting with
+the local file system should be done using [filestore/local_file_store.go](filestore/local_file_store.go). This is so
 that unit tests do not need to actually touch the file system.
 
 ## tests/integration folder
