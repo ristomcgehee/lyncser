@@ -1,5 +1,12 @@
 tasks:
-  - init: make build && make docker-build && pip3 install pytest && go install github.com/golang/mock/mockgen@v1.6.0
+  - init: |-
+      make build && make docker-build && pip3 install pytest && go install github.com/golang/mock/mockgen@v1.6.0 && \
+      mkdir -p $HOME/.config/lyncser
+      if [[ -z "$REAL_GCP_ACCOUNT_CREDENTIALS" ]]; then \
+        echo "$REAL_GCP_ACCOUNT_CREDENTIALS" > $HOME/.config/lyncser/credentials.json; \
+        echo "$REAL_GCP_OAUTH_TOKEN" > $HOME/.config/lyncser/token.json; \
+        ./lyncser sync; \
+      fi
 vscode:
   extensions:
     - golang.go
