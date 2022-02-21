@@ -10,7 +10,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/api v0.69.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	mvdan.cc/sh/v3 v3.4.2
+	mvdan.cc/sh/v3 v3.4.3
 )
 
 require (
