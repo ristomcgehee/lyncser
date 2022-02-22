@@ -1,5 +1,5 @@
-# cloud.google.com/go/compute v1.2.0
-## explicit; go 1.11
+# cloud.google.com/go/compute v1.3.0
+## explicit; go 1.15
 cloud.google.com/go/compute/metadata
 # github.com/cucumber/gherkin-go/v13 v13.0.0
 ## explicit; go 1.13
@@ -105,7 +105,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/api v0.69.0
+# google.golang.org/api v0.70.0
 ## explicit; go 1.15
 google.golang.org/api/drive/v3
 google.golang.org/api/googleapi
@@ -132,7 +132,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20220211171837-173942840c17
+# google.golang.org/genproto v0.0.0-20220218161850-94dd64e39d7c
 ## explicit; go 1.15
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
