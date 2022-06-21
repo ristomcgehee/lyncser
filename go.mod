@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/go-bdd/gobdd v1.1.3
 	github.com/golang/mock v1.6.0
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.5.0
 	go.uber.org/zap v1.21.0
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 	google.golang.org/api v0.74.0
