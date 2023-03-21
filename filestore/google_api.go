@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -56,20 +57,52 @@ func getClient(config *oauth2.Config, forceNewToken bool) (*http.Client, error) 
 
 // getTokenFromWeb requests a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
-
-	var authCode string
-	if _, err := fmt.Scan(&authCode); err != nil {
+	//start server and get the port for changing redirection
+	var codeChan = make(chan string)
+	server, port, err := startServer(codeChan)
+	if err != nil {
 		return nil, err
 	}
+	defer server.Shutdown(context.Background())
+
+	//Change redirect url to the redirect server port
+	config.RedirectURL = fmt.Sprintf("http://localhost:%d", port)
+
+	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	fmt.Printf("Go to the following link in your browser to generate the "+
+		"authorization code: \n%v\n", authURL)
+
+	authCode := <-codeChan
 
 	tok, err := config.Exchange(context.TODO(), authCode)
 	if err != nil {
 		return nil, err
 	}
 	return tok, nil
+}
+
+// Starts a server to handle redirection for getting the authorization code.
+func startServer(codeChan chan string) (*http.Server, int, error) {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return nil, 0, err
+	}
+
+	server := &http.Server{Addr: listener.Addr().String()}
+	go func() {
+		http.HandleFunc("/", makeAuthCodeHandler(codeChan))
+		http.Serve(listener, nil)
+	}()
+	return server, listener.Addr().(*net.TCPAddr).Port, nil
+}
+
+func makeAuthCodeHandler(codeChan chan string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if code := r.URL.Query().Get("code"); len(code) > 0 {
+			w.Write([]byte("Success! You can now close your browser"))
+			codeChan <- code
+		}
+	}
 }
 
 // tokenFromFile retrieves a token from a local file.
