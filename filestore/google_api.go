@@ -57,15 +57,20 @@ func getClient(config *oauth2.Config, forceNewToken bool) (*http.Client, error) 
 
 // getTokenFromWeb requests a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
-	//start server and get the port for changing redirection
-	var codeChan = make(chan string)
+	// start server and get the port for changing redirection
+	codeChan := make(chan string)
 	server, port, err := startServer(codeChan)
 	if err != nil {
 		return nil, err
 	}
-	defer server.Shutdown(context.Background())
+	defer func() {
+		err := server.Shutdown(context.Background())
+		if err != nil {
+			fmt.Printf("Server shutdown error: %v", err)
+		}
+	}()
 
-	//Change redirect url to the redirect server port
+	// Change redirect url to the redirect server port
 	config.RedirectURL = fmt.Sprintf("http://localhost:%d", port)
 
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
@@ -83,7 +88,7 @@ func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
 
 // Starts a server to handle redirection for getting the authorization code.
 func startServer(codeChan chan string) (*http.Server, int, error) {
-	listener, err := net.Listen("tcp", ":0")
+	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, 0, err
 	}
@@ -91,7 +96,10 @@ func startServer(codeChan chan string) (*http.Server, int, error) {
 	server := &http.Server{Addr: listener.Addr().String()}
 	go func() {
 		http.HandleFunc("/", makeAuthCodeHandler(codeChan))
-		http.Serve(listener, nil)
+		err = http.Serve(listener, nil)
+		if err != nil {
+			fmt.Printf("Error starting server: %v", err)
+		}
 	}()
 	return server, listener.Addr().(*net.TCPAddr).Port, nil
 }
@@ -99,7 +107,10 @@ func startServer(codeChan chan string) (*http.Server, int, error) {
 func makeAuthCodeHandler(codeChan chan string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if code := r.URL.Query().Get("code"); len(code) > 0 {
-			w.Write([]byte("Success! You can now close your browser"))
+			_, err := w.Write([]byte("Success! You can now close your browser"))
+			if err != nil {
+				fmt.Printf("Error writing response: %v", err)
+			}
 			codeChan <- code
 		}
 	}
