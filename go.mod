@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/go-bdd/gobdd v1.1.3
 	github.com/golang/mock v1.6.0
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.7.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/oauth2 v0.7.0
 	google.golang.org/api v0.118.0
@@ -26,7 +26,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
