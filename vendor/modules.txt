@@ -268,9 +268,10 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# mvdan.cc/sh/v3 v3.4.3
-## explicit; go 1.16
+# mvdan.cc/sh/v3 v3.6.0
+## explicit; go 1.18
 mvdan.cc/sh/v3/expand
+mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/pattern
 mvdan.cc/sh/v3/shell
 mvdan.cc/sh/v3/syntax
