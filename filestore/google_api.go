@@ -3,6 +3,7 @@ package filestore
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,6 +30,15 @@ const (
 	// Mime type for files that are actually folders.
 	mimeTypeFolder = "application/vnd.google-apps.folder"
 )
+
+// authHandlerResult contains the results of the OAuth authorization code handler.
+type authHandlerResult struct {
+	AuthCode   string
+	StateToken string
+	Err        error
+}
+
+var ErrStateTokenMismatch = errors.New("state token mismatch")
 
 // getClient retrieves a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config, forceNewToken bool) (*http.Client, error) {
@@ -58,7 +68,7 @@ func getClient(config *oauth2.Config, forceNewToken bool) (*http.Client, error) 
 // getTokenFromWeb requests a token from the web, then returns the retrieved token.
 func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
 	// start server and get the port for changing redirection
-	codeChan := make(chan string)
+	codeChan := make(chan authHandlerResult)
 	server, port, err := startServer(codeChan)
 	if err != nil {
 		return nil, err
@@ -73,21 +83,31 @@ func getTokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
 	// Change redirect url to the redirect server port
 	config.RedirectURL = fmt.Sprintf("http://localhost:%d", port)
 
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	stateToken, err := utils.GenerateRandomHexString(128)
+	if err != nil {
+		return nil, err
+	}
+	authURL := config.AuthCodeURL(stateToken, oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser to generate the "+
 		"authorization code: \n%v\n", authURL)
 
-	authCode := <-codeChan
+	authResult := <-codeChan
+	if authResult.Err != nil {
+		return nil, authResult.Err
+	}
+	if authResult.StateToken != stateToken {
+		return nil, ErrStateTokenMismatch
+	}
 
-	tok, err := config.Exchange(context.TODO(), authCode)
+	tok, err := config.Exchange(context.TODO(), authResult.AuthCode)
 	if err != nil {
 		return nil, err
 	}
 	return tok, nil
 }
 
-// Starts a server to handle redirection for getting the authorization code.
-func startServer(codeChan chan string) (*http.Server, int, error) {
+// startServer starts a server to handle redirection for getting the authorization code.
+func startServer(codeChan chan authHandlerResult) (*http.Server, int, error) {
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, 0, err
@@ -98,20 +118,27 @@ func startServer(codeChan chan string) (*http.Server, int, error) {
 		http.HandleFunc("/", makeAuthCodeHandler(codeChan))
 		err = http.Serve(listener, nil)
 		if err != nil {
-			fmt.Printf("Error starting server: %v", err)
+			result := authHandlerResult{}
+			result.Err = err
+			codeChan <- result
 		}
 	}()
 	return server, listener.Addr().(*net.TCPAddr).Port, nil
 }
 
-func makeAuthCodeHandler(codeChan chan string) func(http.ResponseWriter, *http.Request) {
+// makeAuthCodeHandler creates a handler for the OAuth authorization code.
+func makeAuthCodeHandler(codeChan chan authHandlerResult) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if code := r.URL.Query().Get("code"); len(code) > 0 {
+		result := authHandlerResult{}
+		result.AuthCode = r.URL.Query().Get("code")
+		result.StateToken = r.URL.Query().Get("state")
+		if len(result.AuthCode) > 0 && len(result.StateToken) > 0 {
 			_, err := w.Write([]byte("Success! You can now close your browser"))
 			if err != nil {
+				// Not a serious enough error to include in result
 				fmt.Printf("Error writing response: %v", err)
 			}
-			codeChan <- code
+			codeChan <- result
 		}
 	}
 }

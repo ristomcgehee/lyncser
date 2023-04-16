@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"os"
 	"strings"
 	"time"
@@ -56,4 +58,15 @@ func GetNeverSynced() time.Time {
 	//nolint:errcheck
 	neverSynced, _ := time.Parse(TimeFormat, neverSyncedStr)
 	return neverSynced
+}
+
+// GenerateRandomHexString generates a random hex string of the desired length.
+func GenerateRandomHexString(length int) (string, error) {
+	bytes := make([]byte, length)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	randomHexString := hex.EncodeToString(bytes)
+	return randomHexString, nil
 }
