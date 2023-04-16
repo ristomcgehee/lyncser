@@ -6,7 +6,7 @@ require (
 	github.com/go-bdd/gobdd v1.1.3
 	github.com/golang/mock v1.6.0
 	github.com/spf13/cobra v1.4.0
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.24.0
 	golang.org/x/oauth2 v0.7.0
 	google.golang.org/api v0.118.0
 	gopkg.in/yaml.v3 v3.0.1
