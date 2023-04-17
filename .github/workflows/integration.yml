@@ -16,7 +16,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request_target' }}
     steps:
     - name: Checkout code pull request
-      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+      uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       with:
         ref: ${{ github.event.pull_request.head.sha }}
     - name: Run tests 
@@ -30,7 +30,7 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+      uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
     - name: Run tests 
       run: make integration-tests
       env:
