@@ -32,7 +32,7 @@ fairly low-level language, these tests are written in Python. In these tests, mu
 own Docker container running the application. These tests require two environment variables to be set: GCP_ACCOUNT_CREDENTIALS
 and GCP_OAUTH_TOKEN. The former is the contents of a Google Cloud Platform service account credentials file. The latter is
 the OAuth token generated when running lyncser and performing the authorization step (what is written to 
-~/config/lyncser/token.json). If both those variables are set, you can run with:
+~/.config/lyncser/token.json). If both those variables are set, you can run with:
 ```sh
 make integration-tests
 ```
