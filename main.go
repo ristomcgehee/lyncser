@@ -12,7 +12,7 @@ import (
 	"github.com/chrismcgehee/lyncser/utils"
 )
 
-const appVersion = "0.1.18"
+const appVersion = "v0.1.19"
 
 var rootCmd = &cobra.Command{
 	Use: "lyncser",

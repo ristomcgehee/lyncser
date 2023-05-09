@@ -19,7 +19,7 @@ docker-build:
 new-release:
 	@LATEST_RELEASE=$$(git tag | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -n 1);\
 	NEW_RELEASE=$$(echo $$LATEST_RELEASE | awk -F. -v OFS=. '{$$3++;print}');\
-	sed -i "s/const appVersion = \"$$LATEST_RELEASE/const appVersion = \"$$NEW_RELEASE/g" main.go;\
+	sed -i "s/const appVersion = \"v[0-9]*\.[0-9]*\.[0-9]*\"/const appVersion = \"$$NEW_RELEASE\"/g" main.go
 	git add main.go;\
 	git commit -m "Bump version to $$NEW_RELEASE";\
 	git push;\
