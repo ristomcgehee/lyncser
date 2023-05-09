@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -10,6 +11,8 @@ import (
 	"github.com/chrismcgehee/lyncser/sync"
 	"github.com/chrismcgehee/lyncser/utils"
 )
+
+const appVersion = "0.1.18"
 
 var rootCmd = &cobra.Command{
 	Use: "lyncser",
@@ -34,6 +37,15 @@ func init() {
 	addCommonFlags(deleteFilesCmd)
 	deleteFilesCmd.Flags().BoolP("yes", "y", false, "Confirm deletion of all remote files")
 	rootCmd.AddCommand(deleteFilesCmd)
+
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number of lyncser",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(appVersion)
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
 }
 
 func addCommonFlags(cmd *cobra.Command) {
@@ -140,6 +152,11 @@ func getRemoteFileStore(logger utils.Logger) filestore.FileStore {
 }
 
 func main() {
+	// Check for version flag before executing the root command
+	if len(os.Args) == 2 && (os.Args[1] == "-v" || os.Args[1] == "--version") {
+		fmt.Println(appVersion)
+		return
+	}
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)
 	}
