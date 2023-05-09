@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
-	"github.com/chrismcgehee/lyncser/filestore"
-	"github.com/chrismcgehee/lyncser/sync"
-	"github.com/chrismcgehee/lyncser/utils"
+	"github.com/ristomcgehee/lyncser/filestore"
+	"github.com/ristomcgehee/lyncser/sync"
+	"github.com/ristomcgehee/lyncser/utils"
 )
 
 const appVersion = "v0.1.20"

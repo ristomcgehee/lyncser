@@ -72,7 +72,7 @@ linters-settings:
       - FIXME
       - HACK
   gci:
-    local-prefixes: github.com/chrismcgehee/lyncser
+    local-prefixes: github.com/ristomcgehee/lyncser
   gocritic:
     enabled-checks:
       # Diagnostic
@@ -144,4 +144,4 @@ linters-settings:
       - unnecessaryBlock
   wrapcheck:
     ignorePackageGlobs:
-      - 'github.com/chrismcgehee/lyncser/*'
+      - 'github.com/ristomcgehee/lyncser/*'

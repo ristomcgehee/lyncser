@@ -10,7 +10,7 @@ Currently, installation is only supported on Linux.
 
 ### Linux
 
-Download the latest release from https://github.com/chrismcgehee/lyncser/releases, and extract using `tar xvf`. If using systemd, lyncser can be installed by running:
+Download the latest release from https://github.com/ristomcgehee/lyncser/releases, and extract using `tar xvf`. If using systemd, lyncser can be installed by running:
 
 ```sh
 lyncser/install.sh

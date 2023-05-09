@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/api/drive/v3"
 
-	"github.com/chrismcgehee/lyncser/utils"
+	"github.com/ristomcgehee/lyncser/utils"
 )
 
 // File store that uses Google Drive.

@@ -6,7 +6,7 @@ run: build
 	./lyncser sync --log-level=debug
 
 test:
-	go test -timeout 30s github.com/chrismcgehee/lyncser/sync
+	go test -timeout 30s github.com/ristomcgehee/lyncser/sync
 
 mocks:
 	mockgen -source=filestore/file_store.go -package=mocks > sync/mocks/mock_file_store.go

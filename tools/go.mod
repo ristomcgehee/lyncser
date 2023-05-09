@@ -1,4 +1,4 @@
-module github.com/chrismcgehee/lyncser/tools
+module github.com/ristomcgehee/lyncser/tools
 
 go 1.17
 

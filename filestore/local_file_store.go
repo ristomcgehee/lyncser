@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/chrismcgehee/lyncser/utils"
+	"github.com/ristomcgehee/lyncser/utils"
 )
 
 // For accessing local files.

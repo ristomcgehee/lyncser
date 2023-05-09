@@ -1,4 +1,4 @@
-module github.com/chrismcgehee/lyncser
+module github.com/ristomcgehee/lyncser
 
 go 1.17
 

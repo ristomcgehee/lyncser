@@ -14,8 +14,8 @@ import (
 
 	yaml "gopkg.in/yaml.v3"
 
-	"github.com/chrismcgehee/lyncser/filestore"
-	"github.com/chrismcgehee/lyncser/utils"
+	"github.com/ristomcgehee/lyncser/filestore"
+	"github.com/ristomcgehee/lyncser/utils"
 )
 
 const (

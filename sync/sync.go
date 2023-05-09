@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chrismcgehee/lyncser/filestore"
-	"github.com/chrismcgehee/lyncser/utils"
+	"github.com/ristomcgehee/lyncser/filestore"
+	"github.com/ristomcgehee/lyncser/utils"
 )
 
 type SyncedFile struct {

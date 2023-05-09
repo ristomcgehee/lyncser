@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
-	filestore "github.com/chrismcgehee/lyncser/filestore"
+	filestore "github.com/ristomcgehee/lyncser/filestore"
 	gomock "github.com/golang/mock/gomock"
 )
 

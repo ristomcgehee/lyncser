@@ -11,9 +11,9 @@ import (
 	"github.com/go-bdd/gobdd"
 	"github.com/golang/mock/gomock"
 
-	"github.com/chrismcgehee/lyncser/filestore"
-	"github.com/chrismcgehee/lyncser/sync/mocks"
-	"github.com/chrismcgehee/lyncser/utils"
+	"github.com/ristomcgehee/lyncser/filestore"
+	"github.com/ristomcgehee/lyncser/sync/mocks"
+	"github.com/ristomcgehee/lyncser/utils"
 )
 
 func panicError(err error) {
