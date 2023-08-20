@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>lyncser</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/lyncser</string>
+    <string>sync</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>300</integer> <!-- Run every 5 minutes (300 seconds) -->
+  <key>StandardErrorPath</key>
+  <string>/var/log/lyncser-error.log</string> <!-- Log errors -->
+  <key>StandardOutPath</key>
+  <string>/var/log/lyncser.log</string> <!-- Log output -->
+</dict>
+</plist>
